@@ -1,0 +1,121 @@
+    <!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบรายงานพัฒนาการเด็ก</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; color: #333; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h2 { color: #1a73e8; margin: 0; }
+    .nav-menu { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+    .nav-btn { color: white; text-decoration: none; padding: 10px 15px; border-radius: 5px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px; }
+    .btn-goals { background: #34a853; }
+    .btn-assessment { background: #9c27b0; }
+    .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 800px; margin: 0 auto 20px auto; }
+    .selector-container { text-align: center; }
+    select { padding: 10px; font-size: 16px; font-family: 'Sarabun', sans-serif; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 5px; outline: none; }
+    .profile-info { display: none; text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
+    .profile-info h3 { margin: 0; color: #d93025; }
+    .chart-container { display: none; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; }
+    .chart-box { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box; }
+    .chart-div { width: 100%; height: 300px; }
+    #status { text-align: center; color: #666; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>📊 ระบบรายงานพัฒนาการเด็ก</h2>
+    <div class="nav-menu">
+      <a href="goals.html" class="nav-btn btn-goals">✅ หน้าเป้าหมายประจำวัน</a>
+      <a href="assessment.html" class="nav-btn btn-assessment">📝 หน้าประเมินพัฒนาการ</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="selector-container">
+      <label for="child-select"><b>ค้นหาข้อมูลเด็กเพื่อดูกราฟ: </b></label><br><br>
+      <select id="child-select" onchange="loadChildData()">
+        <option value="">-- กรุณาเลือกรายชื่อ --</option>
+      </select>
+    </div>
+    <div id="profile-info" class="profile-info">
+      <h3 id="display-name">-</h3>
+      <p style="margin: 5px 0; color: #555;">รหัสประจำตัว: <span id="display-id">-</span></p>
+    </div>
+  </div>
+
+  <div id="status">กำลังโหลดรายชื่อ...</div>
+
+  <div id="chart-container" class="chart-container">
+    <div class="chart-box"><div id="weight_chart" class="chart-div"></div></div>
+    <div class="chart-box"><div id="height_chart" class="chart-div"></div></div>
+  </div>
+
+  <script>
+    // ⚠️ เอา Web App URL จาก Google Apps Script มาวางตรงนี้
+    const API_URL = "https://script.google.com/macros/s/AKfycbwtCQdcm24VVEeRpEf7QB8_jZ4KVJsPub4wl0Cx_7_GtTeN7tfJFGROlLZ5EylybrNo/exec";
+
+    google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(init);
+
+    function init() { 
+      fetch(API_URL + "?action=getStudents")
+        .then(response => response.json())
+        .then(data => setupDropdown(data))
+        .catch(error => document.getElementById('status').innerText = 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
+    }
+
+    function setupDropdown(students) {
+      const select = document.getElementById('child-select');
+      students.forEach(student => {
+        const option = document.createElement('option');
+        option.value = student.id; option.text = student.id + ' - ' + student.name;
+        select.appendChild(option);
+      });
+      document.getElementById('status').innerText = 'กรุณาเลือกรายชื่อจากเมนูด้านบนเพื่อดูกราฟ';
+    }
+
+    function loadChildData() {
+      const select = document.getElementById('child-select');
+      const selectedId = select.value;
+      if (!selectedId) {
+        document.getElementById('profile-info').style.display = 'none';
+        document.getElementById('chart-container').style.display = 'none';
+        document.getElementById('status').innerText = 'กรุณาเลือกรายชื่อจากเมนูด้านบนเพื่อดูกราฟ';
+        return;
+      }
+      const childName = select.options[select.selectedIndex].text.split(' - ')[1];
+      document.getElementById('display-name').innerText = childName;
+      document.getElementById('display-id').innerText = selectedId;
+      document.getElementById('profile-info').style.display = 'block';
+      document.getElementById('status').innerText = 'กำลังประมวลผลกราฟ...';
+      document.getElementById('chart-container').style.display = 'none';
+
+      fetch(API_URL + "?action=getChildData&id=" + selectedId)
+        .then(response => response.json())
+        .then(data => renderCharts(data, childName));
+    }
+
+    function renderCharts(data, childName) {
+      if (!data || data.length === 0) { document.getElementById('status').innerText = 'ยังไม่มีข้อมูลการบันทึกพัฒนาการในระบบ'; return; }
+      document.getElementById('status').innerText = '';
+      document.getElementById('chart-container').style.display = 'flex';
+
+      const weightData = new google.visualization.DataTable();
+      weightData.addColumn('number', 'อายุ'); weightData.addColumn('number', 'น้ำหนัก');
+      const heightData = new google.visualization.DataTable();
+      heightData.addColumn('number', 'อายุ'); heightData.addColumn('number', 'ส่วนสูง');
+
+      data.forEach(row => { weightData.addRow([row.age, row.weight]); heightData.addRow([row.age, row.height]); });
+
+      const options = { curveType: 'function', pointSize: 7, legend: { position: 'bottom' } };
+      new google.visualization.LineChart(document.getElementById('weight_chart')).draw(weightData, Object.assign({}, options, { title: 'น้ำหนัก (กก.)', colors: ['#4285F4'] }));
+      new google.visualization.LineChart(document.getElementById('height_chart')).draw(heightData, Object.assign({}, options, { title: 'ส่วนสูง (ซม.)', colors: ['#0F9D58'] }));
+    }
+  </script>
+</body>
+</html>
