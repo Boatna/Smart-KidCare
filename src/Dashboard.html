@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IT Control Center Dashboard</title>
+
+  <!-- External Libraries -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    :root {
+      --bg-deep:      #1a1a27;
+      --bg-card:      #27293d;
+      --bg-input:     #1e1e2f;
+      --border:       #3d3f54;
+      --text-muted-c: #9a9a9a;
+    }
+
+    * { box-sizing: border-box; }
+    body { font-family: 'Prompt', sans-serif; background: var(--bg-deep); color: #e4e4e4; }
+
+    /* ── Login ── */
+    #appContent { display: none; }
+    .login-box {
+      background: var(--bg-card);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.5);
+      border: 1px solid var(--border);
+    }
+    .login-logo { font-size: 64px; line-height: 1; }
+
+    /* ── Stat Cards ── */
+    .stat-card { border-radius: 12px; border: none; color: white; transition: transform .2s; }
+    .stat-card:hover { transform: translateY(-5px); }
+    .bg-gradient-primary { background: linear-gradient(135deg, #1e88e5, #1565c0); }
+    .bg-gradient-danger   { background: linear-gradient(135deg, #ef5350, #c62828); }
+    .bg-gradient-warning  { background: linear-gradient(135deg, #ffb300, #f39c12); color: white; }
+    .bg-gradient-success  { background: linear-gradient(135deg, #43a047, #2e7d32); }
+
+    /* ── Panels ── */
+    .panel-container {
+      background: var(--bg-card);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,.2);
+      margin-bottom: 20px;
+    }
+
+    /* ── DataTables Dark ── */
+    .table { color: #e4e4e4 !important; margin-bottom: 0; }
+    .table-dark th {
+      background-color: var(--bg-input) !important;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted-c);
+      font-weight: 500;
+    }
+    .table-hover tbody tr:hover {
+      background-color: #32354a !important;
+      color: white;
+      cursor: pointer;
+    }
+    td { border-color: var(--border) !important; }
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate { color: var(--text-muted-c) !important; margin: 15px 0; }
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dataTables_length select {
+      background-color: var(--bg-input);
+      border: 1px solid var(--border);
+      color: white; border-radius: 5px; padding: 4px 10px;
+    }
+    .page-link { background-color: var(--bg-input); border-color: var(--border); color: #e4e4e4; }
+    .page-item.active .page-link { background-color: #1e88e5; border-color: #1e88e5; }
+    .page-item.disabled .page-link { background-color: var(--bg-deep); border-color: var(--border); color: #6c757d; }
+
+    /* ── Modal ── */
+    .modal-dialog { max-width: 1020px; }
+    .modal-content {
+      background-color: var(--bg-card); color: white;
+      border: 1px solid var(--border); border-radius: 15px;
+    }
+    .modal-header, .modal-footer { border-color: var(--border); }
+    .form-control, .form-select {
+      background-color: var(--bg-input);
+      border: 1px solid var(--border);
+      color: white; border-radius: 8px;
+    }
+    .form-control:focus, .form-select:focus {
+      background-color: var(--bg-input); color: white;
+      border-color: #1e88e5; box-shadow: none;
+    }
+    .form-select option { background-color: var(--bg-input); }
+    .detail-box { background: var(--bg-input); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+    .detail-label { color: var(--text-muted-c); font-size: .85rem; margin-bottom: 2px; }
+    .detail-value { font-weight: 500; font-size: 1rem; margin-bottom: 10px; }
+    canvas { max-height: 250px; }
+
+    /* ── Bell / Notification ── */
+    #bellBtn {
+      position: relative; width: 44px; height: 44px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      border: 1px solid #3d3f54; background: var(--bg-card);
+      cursor: pointer; transition: background .2s;
+    }
+    #bellBtn:hover { background: #32354a; }
+
+    .notif-dropdown {
+      position: absolute; right: 0; top: 52px;
+      width: 360px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+      z-index: 2000; display: none;
+      max-height: 480px; overflow: hidden;
+      flex-direction: column;
+    }
+    .notif-dropdown.show { display: flex; animation: slideDown .2s ease; }
+    .notif-header {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      font-weight: 600; font-size: 14px; color: #e4e4e4;
+    }
+    .notif-list { overflow-y: auto; max-height: 380px; }
+    .notif-item {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .15s;
+    }
+    .notif-item:hover { background: #32354a; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-empty { padding: 28px; text-align: center; color: var(--text-muted-c); font-size: 14px; }
+
+    /* ── External section in modal ── */
+    #externalSection {
+      background: #1e2838;
+      border: 1px dashed #0d6efd;
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes bellShake {
+      0%,100% { transform: rotate(0); }
+      20%     { transform: rotate(-15deg); }
+      40%     { transform: rotate(15deg); }
+      60%     { transform: rotate(-10deg); }
+      80%     { transform: rotate(10deg); }
+    }
+    .bell-ring { animation: bellShake .5s ease; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Login Screen ─────────────────────────────────────────── -->
+<div id="loginScreen" class="container mt-5" style="max-width:400px; padding-top:10vh;">
+  <div class="login-box p-5 text-center">
+    <div class="login-logo mb-3">🛡️</div>
+    <h3 class="fw-bold text-info mb-1">IT Control Center</h3>
+    <p class="text-muted mb-4" style="font-size:13px;">กรุณากรอก PIN เพื่อเข้าสู่ระบบ</p>
+    <input type="password" id="pinInput"
+           class="form-control mb-4 text-center fs-5 rounded-pill"
+           placeholder="PIN Code"
+           maxlength="8"
+           onkeyup="if(event.keyCode===13) checkPin()"
+           style="letter-spacing:6px; background:var(--bg-input); border-color:var(--border); color:white;">
+    <button class="btn btn-info w-100 rounded-pill text-white fw-bold py-2" onclick="checkPin()">
+      <i class="bi bi-box-arrow-in-right me-1"></i> เข้าสู่ระบบ
+    </button>
+    <p class="text-muted mt-4" style="font-size:11px;">
+      ระบบนี้สำหรับเจ้าหน้าที่ IT เท่านั้น<br>
+      ผู้ใช้งานทั่วไปกรุณาใช้หน้า <a href="?" class="text-info">IT Helpdesk</a>
+    </p>
+  </div>
+</div>
+
+<!-- ─── App Content ────────────────────────────────────────────── -->
+<div id="appContent" class="container-fluid mt-4 mb-5 px-4">
+
+  <!-- Header Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h3 class="fw-bold m-0 text-white">
+      <i class="bi bi-speedometer2 text-info"></i> IT Control Center Dashboard
+    </h3>
+    <div class="d-flex align-items-center gap-2">
+
+      <!-- 🔔 Bell Notification -->
+      <div class="position-relative">
+        <div id="bellBtn" onclick="toggleNotifDropdown()">
+          <i class="bi bi-bell-fill text-warning fs-5" id="bellIcon"></i>
+          <span id="bellBadge" class="badge bg-danger"
+                style="position:absolute;top:-4px;right:-4px;
+                       min-width:18px;height:18px;padding:0 5px;
+                       font-size:11px;border-radius:10px;display:none;
+                       align-items:center;justify-content:center;"></span>
+        </div>
+        <!-- Notification Dropdown -->
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-bell-fill text-warning"></i> Ticket รอดำเนินการ</span>
+            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0"
+                    style="font-size:11px;" onclick="loadNotifications()">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+          <div class="notif-list" id="notifList">
+            <div class="notif-empty">
+              <span class="spinner-border spinner-border-sm text-info"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-outline-info rounded-pill" onclick="refreshData()">
+        <i class="bi bi-arrow-clockwise"></i> Sync Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="row text-center mb-4">
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card stat-card bg-gradient-primary shadow">
+        <div class="card-body py-3">
+          <h1 id="statTotal" class="display-5 fw-bold mb-1">0</h1>
+          <p class="m-0 fs-6 opacity-75"><i class="bi bi-ticket-detailed"></i> Ticket ทั้งหมด</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card stat-card bg-gradient-danger shadow">
+        <div class="card-body py-3">
+          <h1 id="statPending" class="display-5 fw-bold mb-1">0</h1>
+          <p class="m-0 fs-6 opacity-75"><i class="bi bi-clock-history"></i> รอดำเนินการ</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card stat-card bg-gradient-warning shadow">
+        <div class="card-body py-3">
+          <h1 id="statDoing" class="display-5 fw-bold mb-1">0</h1>
+          <p class="m-0 fs-6 opacity-75"><i class="bi bi-gear-fill"></i> กำลังดำเนินการ</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card stat-card bg-gradient-success shadow">
+        <div class="card-body py-3">
+          <h1 id="statDone" class="display-5 fw-bold mb-1">0</h1>
+          <p class="m-0 fs-6 opacity-75"><i class="bi bi-check-circle-fill"></i> ซ่อมเสร็จสิ้น</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div class="row mb-3">
+    <div class="col-md-3 mb-3">
+      <div class="panel-container h-100">
+        <h6 class="fw-bold text-info mb-3"><i class="bi bi-exclamation-triangle-fill"></i> สัดส่วนความสำคัญ</h6>
+        <canvas id="priorityChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="panel-container h-100">
+        <h6 class="fw-bold text-info mb-3"><i class="bi bi-building"></i> สัดส่วนตาม Plant</h6>
+        <canvas id="plantChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-5 mb-3">
+      <div class="panel-container h-100">
+        <h6 class="fw-bold text-info mb-3"><i class="bi bi-bar-chart-fill"></i> หมวดหมู่ปัญหาที่พบ</h6>
+        <canvas id="issueTypeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2 -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="panel-container">
+        <h6 class="fw-bold text-info mb-3">
+          <i class="bi bi-diagram-3-fill"></i> 5 อันดับแผนกที่แจ้งปัญหามากที่สุด
+        </h6>
+        <div style="height:250px;">
+          <canvas id="deptChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ticket Table -->
+  <div class="panel-container">
+    <h5 class="fw-bold mb-3 text-white">
+      <i class="bi bi-list-task text-info"></i> รายการแจ้งซ่อม
+      <small class="text-muted fw-normal" style="font-size:13px;">(คลิกที่แถวเพื่อจัดการ)</small>
+    </h5>
+    <div class="table-responsive">
+      <table class="table table-hover text-nowrap align-middle w-100" id="itTicketTable">
+        <thead class="table-dark">
+          <tr>
+            <th>Ticket ID</th>
+            <th>ข้อมูลผู้แจ้ง</th>
+            <th>Plant / เบอร์ติดต่อ</th>
+            <th>ปัญหาที่พบ</th>
+            <th>ความด่วน</th>
+            <th>สถานะ</th>
+            <th class="text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── IT Modal ──────────────────────────────────────────────── -->
+<div class="modal fade" id="itModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold text-info">
+          <i class="bi bi-ticket-detailed"></i> Ticket:
+          <span id="m_ticketId" class="text-white"></span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row">
+
+          <!-- Left: รายละเอียด -->
+          <div class="col-md-7 mb-4">
+            <h6 class="text-warning border-bottom border-secondary pb-2 mb-3">
+              <i class="bi bi-person-lines-fill"></i> ข้อมูลรายละเอียด
+            </h6>
+            <div class="detail-box">
+              <div class="row">
+                <div class="col-6">
+                  <div class="detail-label">ผู้แจ้ง</div>
+                  <div class="detail-value text-info" id="m_empName"></div>
+                </div>
+                <div class="col-6">
+                  <div class="detail-label">แผนก / ตำแหน่ง</div>
+                  <div class="detail-value" id="m_deptPos"></div>
+                </div>
+                <div class="col-6">
+                  <div class="detail-label">Plant / เบอร์ติดต่อ</div>
+                  <div class="detail-value" id="m_plantLoc"></div>
+                </div>
+                <div class="col-6">
+                  <div class="detail-label">รหัส Asset / อุปกรณ์</div>
+                  <div class="detail-value" id="m_asset"></div>
+                </div>
+                <div class="col-12">
+                  <div class="detail-label">อีเมลผู้แจ้ง</div>
+                  <div class="detail-value text-warning" id="m_empEmail"></div>
+                </div>
+              </div>
+            </div>
+            <div class="detail-box">
+              <div class="detail-label">หมวดหมู่ปัญหา</div>
+              <div class="detail-value text-danger" id="m_issueType"></div>
+              <div class="detail-label">รายละเอียดปัญหาที่พบ</div>
+              <div class="detail-value" id="m_detail" style="white-space:pre-wrap;"></div>
+            </div>
+            <!-- New PC section -->
+            <div id="m_newPcSection" class="detail-box border border-info" style="display:none;">
+              <h6 class="text-info mb-3"><i class="bi bi-laptop"></i> ข้อมูลการขอเครื่องใหม่</h6>
+              <div class="detail-label">เหตุผลความจำเป็น</div>
+              <div class="detail-value" id="m_reasonPc"></div>
+              <div class="detail-label">โปรแกรมที่ต้องการ</div>
+              <div class="detail-value" id="m_reqSoft"></div>
+              <a href="#" id="m_photoLink" target="_blank"
+                 class="btn btn-sm btn-outline-info mt-2" style="display:none;">
+                <i class="bi bi-image"></i> คลิกเพื่อดูรูปภาพเครื่องเก่า
+              </a>
+            </div>
+          </div>
+
+          <!-- Right: จัดการ IT -->
+          <div class="col-md-5">
+            <h6 class="text-success border-bottom border-secondary pb-2 mb-3">
+              <i class="bi bi-tools"></i> ส่วนจัดการของช่าง IT
+            </h6>
+            <div class="bg-dark p-3 rounded border border-secondary">
+              <input type="hidden" id="modalRow">
+
+              <!-- ผู้รับผิดชอบ -->
+              <div class="mb-3">
+                <label class="form-label text-muted small">
+                  <i class="bi bi-person-check-fill text-info"></i> ผู้รับผิดชอบงานนี้
+                </label>
+                <select id="modalAssignee" class="form-select">
+                  <option value="">-- เลือกผู้รับผิดชอบ --</option>
+                </select>
+              </div>
+
+              <!-- สถานะ -->
+              <div class="mb-3">
+                <label class="form-label text-muted small">
+                  <i class="bi bi-flag-fill text-warning"></i> อัปเดตสถานะ
+                </label>
+                <select id="modalStatus" class="form-select form-select-lg fw-bold text-info"
+                        onchange="onStatusChange()">
+                  <option value="รอดำเนินการ">🔴 รอดำเนินการ (Pending)</option>
+                  <option value="กำลังดำเนินการ">🟡 กำลังดำเนินการ (In Progress)</option>
+                  <option value="เสร็จสิ้น">🟢 เสร็จสิ้น (Resolved)</option>
+                </select>
+              </div>
+
+              <!-- External Repair -->
+              <div id="externalSection" style="display:none;">
+                <div class="mb-2 form-check form-switch">
+                  <input class="form-check-input" type="checkbox"
+                         id="isExternalCheck" onchange="onExternalToggle()">
+                  <label class="form-check-label text-info fw-bold" for="isExternalCheck">
+                    <i class="bi bi-arrow-up-right-circle-fill"></i> แจ้งซ่อมบริษัทภายนอก
+                  </label>
+                </div>
+                <div id="externalReasonBox" style="display:none;">
+                  <label class="form-label text-muted small mt-2">
+                    รายละเอียด / เหตุผลที่แจ้งซ่อมภายนอก
+                    <span class="text-danger">*</span>
+                  </label>
+                  <textarea id="externalReason" class="form-control" rows="3"
+                            placeholder="เช่น เครื่องอยู่นอกประกัน ต้องส่งศูนย์ซ่อม..."></textarea>
+                </div>
+              </div>
+
+              <!-- หมายเหตุ -->
+              <div class="mb-2 mt-3">
+                <label class="form-label text-muted small">
+                  <i class="bi bi-journal-text text-success"></i> บันทึกการแก้ไข / หมายเหตุ
+                </label>
+                <textarea id="modalNotes" class="form-control" rows="4"
+                          placeholder="บันทึกวิธีแก้ไข หรือ หมายเหตุ..."></textarea>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary rounded-pill"
+                data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+        <button type="button" class="btn btn-info rounded-pill text-white fw-bold px-5"
+                onclick="saveITUpdate()">
+          <i class="bi bi-save-fill"></i> บันทึกข้อมูล
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  /* ═══════════════════════════════════════════════════════════
+     STATE
+  ═══════════════════════════════════════════════════════════ */
+  let charts          = { priority: null, issueType: null, plant: null, dept: null };
+  let globalTickets   = [];
+  let dtInstance      = null;
+  let itModalInstance = null;
+  let notifOpen       = false;
+
+  /* ═══════════════════════════════════════════════════════════
+     LOGIN
+  ═══════════════════════════════════════════════════════════ */
+  function checkPin() {
+    var pin = document.getElementById("pinInput").value.trim();
+    if (!pin) return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสผ่าน', 'warning');
+
+    Swal.fire({
+      title: 'กำลังตรวจสอบ...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    google.script.run
+      .withSuccessHandler(function (ok) {
+        if (ok) {
+          Swal.close();
+          document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("appContent").style.display  = "block";
+          loadITStaff();
+          refreshData();
+        } else {
+          Swal.fire({
+            title: 'รหัสผ่านไม่ถูกต้อง',
+            text: 'กรุณาตรวจสอบ PIN และลองใหม่',
+            icon: 'error'
+          });
+          document.getElementById("pinInput").value = "";
+          document.getElementById("pinInput").focus();
+        }
+      })
+      .withFailureHandler(function (err) {
+        Swal.fire('เกิดข้อผิดพลาด', err.message || err, 'error');
+      })
+      .verifyITPin(pin);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     LOAD IT STAFF
+  ═══════════════════════════════════════════════════════════ */
+  function loadITStaff() {
+    google.script.run
+      .withSuccessHandler(function (staffList) {
+        var sel = document.getElementById("modalAssignee");
+        sel.innerHTML = "";
+        (staffList || []).forEach(function (name) {
+          var opt   = document.createElement("option");
+          opt.value = (name === "-- เลือกผู้รับผิดชอบ --") ? "" : name;
+          opt.text  = name;
+          sel.appendChild(opt);
+        });
+      })
+      .getITStaff();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     REFRESH
+  ═══════════════════════════════════════════════════════════ */
+  function refreshData() {
+    loadStats();
+    loadITTickets();
+    loadNotifications();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     🔔 BELL NOTIFICATION
+  ═══════════════════════════════════════════════════════════ */
+  function loadNotifications() {
+    google.script.run
+      .withSuccessHandler(function (data) {
+        var badge    = document.getElementById("bellBadge");
+        var list     = document.getElementById("notifList");
+        var bellIcon = document.getElementById("bellIcon");
+
+        if (!data || data.length === 0) {
+          badge.style.display = "none";
+          list.innerHTML = '<div class="notif-empty">'
+            + '<i class="bi bi-check-circle text-success fs-3 d-block mb-2"></i>'
+            + 'ไม่มี Ticket ที่รอดำเนินการ</div>';
+          return;
+        }
+
+        badge.style.display = "flex";
+        badge.innerText     = data.length > 9 ? "9+" : data.length;
+
+        bellIcon.classList.remove("bell-ring");
+        void bellIcon.offsetWidth;
+        bellIcon.classList.add("bell-ring");
+
+        list.innerHTML = "";
+        data.forEach(function (n) {
+          var prioColor = n.priority === 'ด่วนมาก' ? '#ef5350'
+                        : (n.priority === 'ปานกลาง' ? '#ffb300' : '#6c757d');
+          var prioEmoji = n.priority === 'ด่วนมาก' ? '🔴'
+                        : (n.priority === 'ปานกลาง' ? '🟡' : '🟢');
+          var div = document.createElement("div");
+          div.className = "notif-item";
+          div.innerHTML =
+            '<div class="d-flex justify-content-between align-items-start">'
+            + '<div>'
+            + '<div class="fw-bold text-info" style="font-size:13px;">' + _esc(n.ticketId) + '</div>'
+            + '<div style="font-size:13px;">' + _esc(n.empName) + '</div>'
+            + '<div class="text-muted" style="font-size:12px;">' + _esc(n.issue) + '</div>'
+            + '</div>'
+            + '<div class="text-end">'
+            + '<span style="color:' + prioColor + ';font-size:12px;">' + prioEmoji + ' ' + _esc(n.priority) + '</span>'
+            + '<div class="text-muted" style="font-size:11px;">'
+            + (n.date ? n.date.split(" ")[0] : "") + '</div>'
+            + '</div></div>';
+          div.onclick = function () {
+            closeNotifDropdown();
+            openITModal(n.ticketId);
+          };
+          list.appendChild(div);
+        });
+      })
+      .getPendingNotifications();
+  }
+
+  function toggleNotifDropdown() {
+    var dd = document.getElementById("notifDropdown");
+    notifOpen = !notifOpen;
+    if (notifOpen) { dd.classList.add("show"); loadNotifications(); }
+    else            { dd.classList.remove("show"); }
+  }
+  function closeNotifDropdown() {
+    document.getElementById("notifDropdown").classList.remove("show");
+    notifOpen = false;
+  }
+  document.addEventListener("click", function (e) {
+    var bellArea = document.getElementById("bellBtn");
+    var dd       = document.getElementById("notifDropdown");
+    if (bellArea && !bellArea.contains(e.target) && dd && !dd.contains(e.target)) {
+      closeNotifDropdown();
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+     TICKET TABLE
+  ═══════════════════════════════════════════════════════════ */
+  function loadITTickets() {
+    var loadingHtml = '<tr id="loadingRow"><td colspan="7" class="text-center py-5">'
+      + '<span class="spinner-border text-info"></span>'
+      + '<div class="text-muted mt-2" style="font-size:13px;">กำลังโหลดข้อมูล...</div>'
+      + '</td></tr>';
+
+    if ($.fn.DataTable.isDataTable('#itTicketTable')) {
+      $('#itTicketTable').DataTable().destroy(true);
+      dtInstance = null;
+    }
+
+    var container = document.querySelector('#itTicketTable').parentNode;
+    container.innerHTML =
+      '<table class="table table-hover text-nowrap align-middle w-100" id="itTicketTable">'
+      + '<thead class="table-dark"><tr>'
+      + '<th>Ticket ID</th><th>ข้อมูลผู้แจ้ง</th><th>Plant / เบอร์ติดต่อ</th>'
+      + '<th>ปัญหาที่พบ</th><th>ความด่วน</th><th>สถานะ</th>'
+      + '<th class="text-center">Action</th>'
+      + '</tr></thead>'
+      + '<tbody>' + loadingHtml + '</tbody>'
+      + '</table>';
+
+    google.script.run
+      .withSuccessHandler(function (data) {
+        globalTickets = data || [];
+
+        var rows = [];
+        if (globalTickets.length === 0) {
+          rows.push('<tr><td colspan="7" class="text-center py-4 text-muted">'
+            + '<i class="bi bi-inbox fs-3 d-block mb-2"></i>ไม่มีข้อมูล</td></tr>');
+        } else {
+          globalTickets.forEach(function (r) {
+            var badgePrio = r.priority === 'ด่วนมาก'
+              ? '<span class="badge bg-danger rounded-pill">🔴 ด่วนมาก</span>'
+              : (r.priority === 'ปานกลาง'
+                ? '<span class="badge bg-warning text-dark rounded-pill">🟡 ปานกลาง</span>'
+                : '<span class="badge bg-secondary rounded-pill">🟢 ทั่วไป</span>');
+            var badgeStat = r.status === 'เสร็จสิ้น'
+              ? '<span class="badge bg-success">เสร็จสิ้น</span>'
+              : (r.status === 'กำลังดำเนินการ'
+                ? '<span class="badge bg-warning text-dark">กำลังดำเนินการ</span>'
+                : '<span class="badge bg-danger">รอดำเนินการ</span>');
+            var extBadge = (r.isExternal && r.isExternal.trim())
+              ? '<br><span class="badge bg-info text-dark mt-1">'
+                + '<i class="bi bi-arrow-up-right-circle"></i> แจ้งซ่อมนอก</span>'
+              : '';
+            var dateStr = r.date ? r.date.split(" ")[0] : '-';
+            rows.push(
+              '<tr data-ticketid="' + _esc(r.ticketId) + '" style="cursor:pointer;">'
+              + '<td class="fw-bold text-info">' + _esc(r.ticketId)
+              + '<br><small class="text-muted fw-normal">' + dateStr + '</small></td>'
+              + '<td>' + _esc(r.empName)
+              + '<br><small class="text-muted">รหัส: ' + _esc(r.empId) + '</small></td>'
+              + '<td>' + _esc(r.plant)
+              + '<br><small class="text-muted">โทร: ' + _esc(r.contactPhone) + '</small></td>'
+              + '<td><div style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+              + '<b>' + _esc(r.issue) + '</b><br>'
+              + '<small class="text-muted">' + _esc(r.detail) + '</small></div></td>'
+              + '<td>' + badgePrio + '</td>'
+              + '<td>' + badgeStat + extBadge + '</td>'
+              + '<td class="text-center">'
+              + '<button class="btn btn-sm btn-outline-info rounded-pill px-3">Manage</button>'
+              + '</td>'
+              + '</tr>'
+            );
+          });
+        }
+
+        document.querySelector('#itTicketTable tbody').innerHTML = rows.join('');
+
+        dtInstance = $('#itTicketTable').DataTable({
+          destroy: true,
+          language: {
+            lengthMenu:   "แสดง _MENU_ รายการ",
+            zeroRecords:  "ไม่พบข้อมูลที่ค้นหา",
+            info:         "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ",
+            infoEmpty:    "ไม่มีข้อมูล",
+            infoFiltered: "(กรองจาก _MAX_ รายการ)",
+            search:       "🔍 ค้นหา:",
+            paginate:     { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
+          },
+          pageLength: 10,
+          order: [],
+          dom: '<"row align-items-center mb-3"<"col-md-6"B><"col-md-6"f>>'
+             + 'rt'
+             + '<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>',
+          buttons: [{
+            extend:    'excelHtml5',
+            text:      '<i class="bi bi-file-earmark-excel-fill"></i> ดาวน์โหลด Excel',
+            className: 'btn btn-success btn-sm rounded-pill px-3',
+            title:     'IT_Requests_Export'
+          }],
+          columnDefs: [{ orderable: false, targets: 6 }]
+        });
+
+        $('#itTicketTable tbody').off('click', 'tr').on('click', 'tr', function () {
+          var tid = $(this).data('ticketid');
+          if (tid) openITModal(String(tid));
+        });
+      })
+      .withFailureHandler(function (err) {
+        document.querySelector('#itTicketTable tbody').innerHTML =
+          '<tr><td colspan="7" class="text-center text-danger py-4">'
+          + '<i class="bi bi-exclamation-triangle-fill me-2"></i>'
+          + 'โหลดข้อมูลไม่สำเร็จ: ' + _esc(err.message || String(err)) + '</td></tr>';
+      })
+      .getActiveTickets();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     CHARTS
+  ═══════════════════════════════════════════════════════════ */
+  function loadStats() {
+    google.script.run
+      .withSuccessHandler(function (stats) {
+        document.getElementById("statTotal").innerText   = stats.total   || 0;
+        document.getElementById("statPending").innerText = stats.pending || 0;
+        document.getElementById("statDoing").innerText   = stats.doing   || 0;
+        document.getElementById("statDone").innerText    = stats.done    || 0;
+        renderCharts(stats);
+      })
+      .getDashboardStats();
+  }
+
+  function renderCharts(stats) {
+    Chart.defaults.color = '#9a9a9a';
+    Object.values(charts).forEach(function (c) { if (c) c.destroy(); });
+
+    charts.priority = new Chart(document.getElementById('priorityChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['ทั่วไป', 'ปานกลาง', 'ด่วนมาก'],
+        datasets: [{
+          data: [
+            stats.byPriority['ทั่วไป']  || 0,
+            stats.byPriority['ปานกลาง'] || 0,
+            stats.byPriority['ด่วนมาก'] || 0
+          ],
+          backgroundColor: ['#6c757d', '#ffb300', '#ef5350'],
+          borderWidth: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    charts.plant = new Chart(document.getElementById('plantChart'), {
+      type: 'pie',
+      data: {
+        labels: Object.keys(stats.byPlant),
+        datasets: [{
+          data: Object.values(stats.byPlant),
+          backgroundColor: ['#1e88e5', '#8e24aa', '#00897b', '#fb8c00', '#e53935', '#43a047'],
+          borderWidth: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    charts.issueType = new Chart(document.getElementById('issueTypeChart'), {
+      type: 'bar',
+      data: {
+        labels: Object.keys(stats.byIssueType),
+        datasets: [{ label: 'Tickets', data: Object.values(stats.byIssueType), backgroundColor: '#42a5f5', borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#3d3f54' } }, x: { grid: { display: false } } }
+      }
+    });
+
+    var sortedDepts = Object.entries(stats.byDept).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    charts.dept = new Chart(document.getElementById('deptChart'), {
+      type: 'bar',
+      data: {
+        labels: sortedDepts.map(d => d[0]),
+        datasets: [{ label: 'Tickets', data: sortedDepts.map(d => d[1]), backgroundColor: '#ab47bc', borderRadius: 4 }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, grid: { color: '#3d3f54' } }, y: { grid: { display: false } } }
+      }
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MODAL — OPEN
+  ═══════════════════════════════════════════════════════════ */
+  function openITModal(ticketId) {
+    var t = globalTickets.find(x => x.ticketId === ticketId);
+    if (!t) return;
+
+    document.getElementById("m_ticketId").innerText  = t.ticketId;
+    document.getElementById("m_empName").innerText   = t.empName + " (" + t.empId + ")";
+    document.getElementById("m_deptPos").innerText   = (t.dept || "-") + " / " + (t.position || "-");
+    document.getElementById("m_plantLoc").innerText  = (t.plant || "-") + " / โทร: " + (t.contactPhone || "-");
+    document.getElementById("m_asset").innerText     = t.asset || "-";
+    document.getElementById("m_empEmail").innerText  = t.empEmail || "(ไม่มีอีเมล)";
+    document.getElementById("m_issueType").innerText = t.issue;
+    document.getElementById("m_detail").innerText    = t.detail;
+
+    var isNewPc = t.issue === "Request_New_PC";
+    document.getElementById("m_newPcSection").style.display = isNewPc ? "block" : "none";
+    if (isNewPc) {
+      document.getElementById("m_reasonPc").innerText = t.reasonPc || "-";
+      document.getElementById("m_reqSoft").innerText  = t.reqSoft  || "-";
+      var photoLink = document.getElementById("m_photoLink");
+      if (t.photo) {
+        photoLink.style.display = "inline-block";
+        photoLink.href = t.photo;
+      } else {
+        photoLink.style.display = "none";
+      }
+    }
+
+    document.getElementById("modalRow").value    = t.row;
+    document.getElementById("modalStatus").value = t.status || "รอดำเนินการ";
+    document.getElementById("modalNotes").value  = t.note   || "";
+
+    var sel = document.getElementById("modalAssignee");
+    sel.value = t.assignee || "";
+    if (t.assignee && sel.value !== t.assignee) {
+      var found = false;
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === t.assignee) { found = true; break; }
+      }
+      if (!found) {
+        var opt = document.createElement("option");
+        opt.value = t.assignee;
+        opt.text  = t.assignee + " (เก่า)";
+        sel.appendChild(opt);
+      }
+      sel.value = t.assignee;
+    }
+
+    var isExt = !!(t.isExternal && t.isExternal.trim() !== "");
+    document.getElementById("isExternalCheck").checked         = isExt;
+    document.getElementById("externalReason").value           = t.externalReason || "";
+    document.getElementById("externalReasonBox").style.display = isExt ? "block" : "none";
+
+    onStatusChange();
+
+    if (!itModalInstance) {
+      itModalInstance = new bootstrap.Modal(document.getElementById('itModal'));
+    }
+    itModalInstance.show();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MODAL — STATUS CHANGE
+  ═══════════════════════════════════════════════════════════ */
+  function onStatusChange() {
+    var status = document.getElementById("modalStatus").value;
+    var extSec = document.getElementById("externalSection");
+    if (status === "กำลังดำเนินการ") {
+      extSec.style.display = "block";
+    } else {
+      extSec.style.display = "none";
+      document.getElementById("isExternalCheck").checked         = false;
+      document.getElementById("externalReasonBox").style.display = "none";
+      document.getElementById("externalReason").value           = "";
+    }
+  }
+
+  function onExternalToggle() {
+    var checked = document.getElementById("isExternalCheck").checked;
+    document.getElementById("externalReasonBox").style.display = checked ? "block" : "none";
+    if (!checked) document.getElementById("externalReason").value = "";
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MODAL — SAVE
+  ═══════════════════════════════════════════════════════════ */
+  function saveITUpdate() {
+    var row        = document.getElementById("modalRow").value;
+    var status     = document.getElementById("modalStatus").value;
+    var assignee   = document.getElementById("modalAssignee").value;
+    var notes      = document.getElementById("modalNotes").value;
+    var isExternal = document.getElementById("isExternalCheck").checked;
+    var extReason  = document.getElementById("externalReason").value;
+
+    if (isExternal && extReason.trim() === "") {
+      return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกรายละเอียดการแจ้งซ่อมภายนอก', 'warning');
+    }
+
+    Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        Swal.fire({ title: 'อัปเดตสำเร็จ ✅', text: msg, icon: 'success', timer: 1500, showConfirmButton: false });
+        itModalInstance.hide();
+        refreshData();
+      })
+      .withFailureHandler(function (err) {
+        Swal.fire('เกิดข้อผิดพลาด', err.message || err, 'error');
+      })
+      .updateTicketByIT(row, status, assignee, notes, isExternal, extReason);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     HELPER: XSS-safe escape
+  ═══════════════════════════════════════════════════════════ */
+  function _esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>

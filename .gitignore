@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# Clasp credentials (อย่า commit ไฟล์นี้เด็ดขาด!)
+.clasprc.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+*.swp
