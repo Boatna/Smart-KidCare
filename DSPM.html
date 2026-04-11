@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบประเมินพัฒนาการ DSPM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:    #1a6b3c;
+      --primary-lt: #2e8b57;
+      --accent:     #f0a500;
+      --danger:     #c0392b;
+      --warn:       #e67e22;
+      --info:       #2980b9;
+      --pass-bg:    #eafaf1;
+      --pass-bdr:   #27ae60;
+      --fail-bg:    #fef0ed;
+      --fail-bdr:   #c0392b;
+      --card-bg:    #fff;
+      --page-bg:    #f4f7f4;
+      --text:       #1a2a1a;
+      --muted:      #6b7c6b;
+      --radius:     12px;
+      --shadow:     0 2px 16px rgba(26,107,60,0.10);
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--page-bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.65;
+    }
+
+    /* ===== HEADER ===== */
+    .app-header {
+      background: linear-gradient(135deg, var(--primary) 0%, #145a32 100%);
+      color: #fff;
+      padding: 18px 20px 14px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 3px 16px rgba(0,0,0,0.18);
+    }
+    .app-header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .app-header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+    /* ===== STEP INDICATOR ===== */
+    .steps {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      background: #fff;
+      border-bottom: 1px solid #e8ede8;
+      padding: 0;
+      overflow-x: auto;
+    }
+    .step-item {
+      flex: 1;
+      min-width: 80px;
+      text-align: center;
+      padding: 10px 6px;
+      font-size: 12px;
+      color: var(--muted);
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .step-item.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+    .step-item.done   { color: var(--pass-bdr); border-bottom-color: var(--pass-bdr); }
+    .step-icon { font-size: 18px; display: block; }
+
+    /* ===== CONTAINER ===== */
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: 60px;
+    }
+
+    /* ===== CARD ===== */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      background: var(--primary);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ===== FORM FIELDS ===== */
+    .field-group { margin-bottom: 14px; }
+    .field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .field-label span.req { color: var(--danger); }
+    input[type="text"], input[type="date"], select, textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #d5e3d5;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: 'Sarabun', sans-serif;
+      background: #fafffe;
+      color: var(--text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+       appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26,107,60,0.12);
+    }
+    .age-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .key-age-notice {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #7d5c00;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .key-age-notice.show { display: block; }
+
+    /* ===== DOMAIN TABS ===== */
+    .domain-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      margin-bottom: 14px;
+      padding-bottom: 2px;
+    }
+    .domain-tab {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 2px solid #ddd;
+      background: #f5f5f5;
+      color: #555;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .domain-tab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .domain-tab .d-count { font-size: 11px; opacity: 0.75; }
+    .domain-tab.active.d-GM { background: #1565c0; border-color: #1565c0; }
+    .domain-tab.active.d-FM { background: #6a1b9a; border-color: #6a1b9a; }
+    .domain-tab.active.d-RL { background: #00695c; border-color: #00695c; }
+    .domain-tab.active.d-EL { background: #e65100; border-color: #e65100; }
+    .domain-tab.active.d-PS { background: #558b2f; border-color: #558b2f; }
+
+    /* ===== PROGRESS ===== */
+    .progress-wrap { background: #e8ede8; border-radius: 20px; height: 8px; overflow: hidden; margin-bottom: 4px; }
+    .progress-bar { height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.4s ease; width: 0%; }
+    .progress-text { font-size: 12px; color: var(--muted); text-align: right; }
+    .progress-text strong { color: var(--primary); }
+
+    /* ===== QUESTION CARD ===== */
+    .q-card {
+      border: 1.5px solid #e0e8e0;
+      border-left: 5px solid #ccc;
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      animation: slideIn 0.25s ease;
+    }
+    @keyframes slideIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .q-GM { border-left-color: #1565c0; }
+    .q-FM { border-left-color: #6a1b9a; }
+    .q-RL { border-left-color: #00695c; }
+    .q-EL { border-left-color: #e65100; }
+    .q-PS { border-left-color: #558b2f; }
+    .q-card.answered-pass { border-color: var(--pass-bdr); background: #fafff8; }
+    .q-card.answered-fail { border-color: var(--fail-bdr); background: #fff8f7; }
+    .q-card.unanswered    { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(192,57,43,0.12); animation: shake 0.3s ease; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+
+    .q-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+    .item-badge { background: #1a6b3c; color: #fff; border-radius: 6px; font-size: 11px; font-weight: 700; padding: 2px 8px; white-space: nowrap; flex-shrink: 0; }
+    .domain-pill { border-radius: 6px; font-size: 11px; font-weight: 700; padding: 2px 8px; white-space: nowrap; flex-shrink: 0; color: #fff; }
+    .dp-GM { background: #1565c0; } .dp-FM { background: #6a1b9a; }
+    .dp-RL { background: #00695c; } .dp-EL { background: #e65100; } .dp-PS { background: #558b2f; }
+    .ef-badge { background: #f39c12; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex-shrink: 0; }
+    .skill-text { font-weight: 600; font-size: 14px; color: var(--text); line-height: 1.4; }
+
+    .info-box { border-radius: 7px; padding: 9px 12px; font-size: 13px; margin-bottom: 8px; line-height: 1.65; }
+    .method-box   { background: #e8f4f8; border-left: 3px solid #2980b9; }
+    .training-box { background: #eafaf1; border-left: 3px solid #27ae60; }
+    .info-label { font-weight: 700; font-size: 12px; display: block; margin-bottom: 3px; }
+    .method-label   { color: #1a5276; }
+    .training-label { color: #1e8449; }
+    .info-toggle {
+      background: none; border: none; color: var(--info);
+      font-size: 12px; font-family: 'Sarabun', sans-serif;
+      cursor: pointer; padding: 0; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 4px; font-weight: 600;
+    }
+    .info-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+    .info-toggle.open .arrow { transform: rotate(180deg); }
+    .collapsible { display: none; }
+    .collapsible.open { display: block; }
+
+    /* ===== RADIO BUTTONS ===== */
+    .radio-group { display: flex; gap: 8px; margin-top: 10px; }
+    .radio-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 10px 8px; border-radius: 8px; border: 2px solid #d5e3d5;
+      cursor: pointer; font-size: 15px; font-weight: 700;
+      font-family: 'Sarabun', sans-serif; transition: all 0.15s; user-select: none;
+    }
+    .radio-btn input { display: none; }
+    .radio-btn.pass:hover { background: #d5f5e3; border-color: var(--pass-bdr); }
+    .radio-btn.fail:hover { background: #fde8e4; border-color: var(--fail-bdr); }
+    .radio-btn.pass.selected { background: var(--pass-bg); border-color: var(--pass-bdr); color: #1e8449; }
+    .radio-btn.fail.selected { background: var(--fail-bg); border-color: var(--fail-bdr); color: var(--danger); }
+
+    /* ===== DOMAIN SUMMARY ===== */
+    .domain-summary { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-bottom: 14px; }
+    .ds-item { background: #f0f4f0; border-radius: 8px; padding: 8px 4px; text-align: center; font-size: 12px; }
+    .ds-label { font-weight: 700; font-size: 13px; }
+    .ds-count { color: var(--muted); }
+    .ds-item.all-pass { background: #d5f5e3; }
+    .ds-item.has-fail  { background: #fde8e4; }
+
+    /* ===== AUTO RESULT ===== */
+    .auto-result { border-radius: var(--radius); padding: 14px 16px; text-align: center; font-size: 16px; font-weight: 800; display: none; margin-bottom: 14px; }
+    .auto-result.show { display: block; }
+    .auto-result.pass { background: #d5f5e3; color: #1e8449; border: 2px solid var(--pass-bdr); }
+    .auto-result.warn { background: #fef9e7; color: #9c640c; border: 2px solid var(--accent); }
+    .auto-result.fail { background: var(--fail-bg); color: var(--danger); border: 2px solid var(--fail-bdr); }
+
+    /* ===== BUTTONS ===== */
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      flex: 1; min-width: 100px; padding: 13px 10px; border: none;
+      border-radius: 8px; font-size: 15px; font-weight: 700;
+      font-family: 'Sarabun', sans-serif; cursor: pointer; transition: all 0.18s;
+    }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
+    .btn-primary   { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #145a32; transform: translateY(-1px); }
+    .btn-secondary { background: #e8f0e8; color: var(--primary); border: 2px solid var(--primary); }
+    .btn-secondary:hover:not(:disabled) { background: #d0e4d0; }
+    .btn-warn  { background: var(--warn); color: #fff; }
+    .btn-print { background: #7f8c8d; color: #fff; }
+    .btn-print:hover:not(:disabled) { background: #626567; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 999; align-items: center; justify-content: center; padding: 16px; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: #fff; border-radius: 16px; padding: 22px 20px; max-width: 440px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.22); max-height: 90vh; overflow-y: auto; animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes popIn { from { transform:scale(0.88); opacity:0; } to { transform:scale(1); opacity:1; } }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 14px; text-align: center; }
+    .status-badge { display: inline-block; border-radius: 8px; padding: 4px 12px; font-size: 13px; font-weight: 700; }
+    .sb-pass { background: #d5f5e3; color: #1e8449; }
+    .sb-warn { background: #fef9e7; color: #9c640c; }
+    .sb-fail { background: var(--fail-bg); color: var(--danger); }
+    .modal-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f0f4f0; font-size: 14px; gap: 8px; }
+    .modal-row:last-of-type { border-bottom: none; }
+    .modal-row-label { color: var(--muted); flex-shrink: 0; }
+    .modal-row-value { font-weight: 600; text-align: right; }
+    .modal-domain-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; margin: 10px 0; }
+    .mds-item { text-align: center; border-radius: 6px; padding: 6px 2px; font-size: 11px; }
+    .mds-label { font-weight: 800; font-size: 13px; }
+    .mds-all  { background: #d5f5e3; color: #1e8449; }
+    .mds-some { background: #fde8e4; color: var(--danger); }
+    .mds-na   { background: #f0f0f0; color: #999; }
+    .fail-list { background: #fff8f7; border: 1px dashed var(--fail-bdr); border-radius: 8px; padding: 8px 10px; max-height: 180px; overflow-y: auto; margin: 8px 0; font-size: 13px; }
+    .fail-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #fde8e4; gap: 8px; }
+    .fail-item:last-child { border-bottom: none; }
+    .workflow-box { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #7d5c00; margin: 10px 0; line-height: 1.6; }
+    .workflow-box strong { display: block; margin-bottom: 3px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+    /* ===== MESSAGE ===== */
+    .msg-box { border-radius: var(--radius); padding: 14px; text-align: center; font-weight: 700; font-size: 15px; display: none; margin-top: 16px; }
+    .msg-box.show { display: block; }
+    .msg-success { background: #d5f5e3; color: #1e8449; border: 2px solid var(--pass-bdr); }
+    .msg-error   { background: var(--fail-bg); color: var(--danger); border: 2px solid var(--fail-bdr); }
+
+    /* ===== LOADER ===== */
+    .loader { text-align: center; padding: 32px; color: var(--primary); font-weight: 600; font-size: 15px; }
+    .loader::after { content: ''; display: block; width: 36px; height: 36px; border: 4px solid #d5e3d5; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 12px auto 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .section-divider { border: none; border-top: 2px dashed #d5e3d5; margin: 20px 0; }
+
+    @media print {
+      .app-header, .steps, .btn-row, .domain-tabs, .modal-overlay, .info-toggle { display: none !important; }
+      .container { max-width: 100%; padding: 0; }
+      .q-card { break-inside: avoid; border: 1px solid #ccc !important; }
+    }
+    @media (max-width: 440px) {
+      .domain-summary { grid-template-columns: repeat(5,1fr); gap: 4px; }
+      .ds-label { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== APP HEADER ===== -->
+<div class="app-header">
+  <h1>🌱 ระบบประเมินพัฒนาการ DSPM</h1>
+  <p>Developmental Surveillance and Promotion Manual · กรมอนามัย กระทรวงสาธารณสุข</p>
+</div>
+
+<!-- ===== STEP INDICATOR ===== -->
+<div class="steps" id="stepBar">
+  <div class="step-item active" id="step1"><span class="step-icon">👶</span>ข้อมูลเด็ก</div>
+  <div class="step-item" id="step2"><span class="step-icon">📋</span>ประเมิน</div>
+  <div class="step-item" id="step3"><span class="step-icon">📊</span>สรุปผล</div>
+</div>
+
+<!-- ===== MAIN CONTAINER ===== -->
+<div class="container">
+
+  <!-- STEP 1 -->
+  <div id="panelStep1">
+    <div class="card">
+      <div class="card-title">ข้อมูลเด็กและผู้ประเมิน</div>
+
+      <div class="field-group">
+        <label class="field-label">ชื่อ-นามสกุลเด็ก <span class="req">*</span></label>
+        <input type="text" id="childName" placeholder="กรอกชื่อ-นามสกุลเด็ก...">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">วันเกิด (ใช้คำนวณอายุ)</label>
+        <input type="date" id="childBirthdate" onchange="calcAge()">
+        <div id="ageBadge" style="margin-top:6px;display:none;">
+          <span class="age-badge" id="ageDisplay"></span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">ช่วงวัยที่ประเมิน <span class="req">*</span></label>
+        <select id="ageGroup" required>
+          <option value="">กำลังโหลดช่วงวัย...</option>
+        </select>
+        <div id="keyAgeNotice" class="key-age-notice">
+          ⭐ ช่วงวัยนี้เป็น <strong>ช่วงคัดกรองหลัก</strong> ตามคู่มือ DSPM (9, 18, 30, 42, 60 เดือน) ควรดำเนินการโดยเจ้าหน้าที่สาธารณสุข
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">รอบที่ประเมิน</label>
+        <select id="screeningRound">
+          <option value="1">รอบที่ 1 (ครั้งแรก)</option>
+          <option value="2">รอบที่ 2 (ติดตาม หลังกระตุ้น 30 วัน)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">ผู้ประเมิน</label>
+        <input type="text" id="assessorName" placeholder="ชื่อผู้ประเมิน (เจ้าหน้าที่/ผู้ปกครอง)">
+      </div>
+
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn btn-primary" onclick="startAssessment()">เริ่มประเมิน →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="panelStep2" style="display:none;">
+    <div class="domain-tabs" id="domainTabs"></div>
+
+    <div style="margin-bottom:12px;">
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-text">ตอบแล้ว <strong id="progCount">0</strong> / <strong id="progTotal">0</strong> ข้อ</div>
+    </div>
+
+    <div class="domain-summary" id="domainSummary"></div>
+    <div id="loadingIndicator" class="loader" style="display:none;">กำลังโหลดแบบประเมิน</div>
+    <div id="questionsContainer"></div>
+
+    <hr class="section-divider">
+    <div id="autoResult" class="auto-result"></div>
+
+    <div class="card" id="summaryCard" style="display:none;">
+      <div class="card-title">ข้อสังเกตเพิ่มเติม</div>
+      <textarea id="notes" rows="3" placeholder="ระบุพฤติกรรมหรือข้อสังเกตเพิ่มเติม..."></textarea>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-secondary" onclick="resetAll()">🔄 เริ่มใหม่</button>
+        <button class="btn btn-print" onclick="window.print()">🖨️</button>
+        <button class="btn btn-primary" onclick="openConfirm()">บันทึกผล 💾</button>
+      </div>
+    </div>
+
+    <div id="msgBox" class="msg-box"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="panelStep3" style="display:none;">
+    <div class="card">
+      <div class="card-title">ผลการประเมิน</div>
+      <div id="resultFinal"></div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-secondary" onclick="resetAll()">🔄 ประเมินเด็กคนต่อไป</button>
+        <button class="btn btn-print" onclick="window.print()">🖨️ พิมพ์</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== CONFIRM MODAL ===== -->
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">📋 สรุปผลการประเมิน</div>
+    <div class="modal-row"><span class="modal-row-label">ชื่อเด็ก</span><span class="modal-row-value" id="m_name">-</span></div>
+    <div class="modal-row"><span class="modal-row-label">อายุ / ช่วงวัย</span><span class="modal-row-value" id="m_age">-</span></div>
+    <div class="modal-row"><span class="modal-row-label">รอบที่ประเมิน</span><span class="modal-row-value" id="m_round">-</span></div>
+    <div class="modal-row"><span class="modal-row-label">ผ่าน / ไม่ผ่าน</span><span class="modal-row-value" id="m_score">-</span></div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:10px;margin-bottom:4px;">ผลรายด้าน</div>
+    <div class="modal-domain-grid" id="m_domains"></div>
+
+    <div id="m_failSection" style="display:none;">
+      <div style="font-size:13px;font-weight:700;color:var(--danger);margin-top:8px;margin-bottom:4px;">⚠️ ข้อที่ไม่ผ่าน</div>
+      <div class="fail-list" id="m_failList"></div>
+    </div>
+
+    <div id="m_workflow" class="workflow-box" style="display:none;"></div>
+    <div style="text-align:center;margin-top:10px;" id="m_resultBadge"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeConfirm()">← กลับแก้ไข</button>
+      <button class="btn btn-primary" id="confirmBtn" onclick="submitForm()">✅ ยืนยันบันทึก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ⚙️ CONFIG — แก้ URL ตรงนี้หลัง Deploy Apps Script
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUrOX1WvKyahnUgs3AjvfsIrwI-6Bvzf2ulQY72JUTnLrjbtZTavvZjssKSA2tkFZC/exec';
+
+// ============================================================
+// API Helper — แทนที่ google.script.run ด้วย fetch
+// ============================================================
+async function callAPI(action, params = {}) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    // Apps Script Web App ต้องการ no-cors หรือ text/plain เพื่อหลีกเลี่ยง preflight
+    // ใช้ 'no-cors' ไม่ได้อ่าน response → ใช้ redirect แทน
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, ...params })
+  });
+  return res.json();
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let questionsData = [];
+let answersState  = {};
+let answeredCount = 0;
+let currentDomain = 'ALL';
+let domainCounts  = {};
+let childAgeMonths = null;
+
+// ============================================================
+// INIT — โหลดช่วงวัย
+// ============================================================
+window.onload = async function() {
+  const sel = document.getElementById('ageGroup');
+  try {
+    const res = await callAPI('getAgeGroups');
+    sel.innerHTML = '<option value="">-- เลือกช่วงวัย --</option>';
+
+    if (res.status === 'success' && res.data.length > 0) {
+      const keyGroup   = document.createElement('optgroup');
+      keyGroup.label   = '⭐ ช่วงคัดกรองหลัก (เจ้าหน้าที่)';
+      const otherGroup = document.createElement('optgroup');
+      otherGroup.label = '📋 ช่วงวัยอื่น (พ่อแม่/ผู้ปกครอง)';
+      let hasKey = false, hasOther = false;
+
+      res.data.forEach(ag => {
+        const opt = document.createElement('option');
+        opt.value = ag.name;
+        opt.textContent = ag.name;
+        if (ag.isKey) { keyGroup.appendChild(opt); hasKey = true; }
+        else { otherGroup.appendChild(opt); hasOther = true; }
+      });
+      if (hasKey)   sel.appendChild(keyGroup);
+      if (hasOther) sel.appendChild(otherGroup);
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="">โหลดไม่สำเร็จ — ตรวจสอบ SCRIPT_URL</option>';
+    console.error('callAPI getAgeGroups error:', e);
+  }
+  sel.onchange = onAgeGroupChange;
+};
+
+// ============================================================
+// CALC AGE
+// ============================================================
+function calcAge() {
+  const bdate = document.getElementById('childBirthdate').value;
+  if (!bdate) { document.getElementById('ageBadge').style.display = 'none'; return; }
+  const birth = new Date(bdate);
+  const today = new Date();
+  let months = (today.getFullYear() - birth.getFullYear()) * 12 +
+               (today.getMonth() - birth.getMonth());
+  if (today.getDate() < birth.getDate()) months--;
+  childAgeMonths = months;
+  const years = Math.floor(months / 12);
+  const rem   = months % 12;
+  let txt = months + ' เดือน';
+  if (years > 0) txt = years + ' ปี ' + rem + ' เดือน';
+  document.getElementById('ageDisplay').textContent = '🎂 อายุ ' + txt;
+  document.getElementById('ageBadge').style.display = 'block';
+}
+
+// ============================================================
+// AGE GROUP CHANGE
+// ============================================================
+function onAgeGroupChange() {
+  const ag = document.getElementById('ageGroup').value;
+  const keyAges = ['9 เดือน','18 เดือน','30 เดือน','42 เดือน','60 เดือน'];
+  document.getElementById('keyAgeNotice').classList.toggle('show', keyAges.includes(ag));
+}
+
+// ============================================================
+// START ASSESSMENT
+// ============================================================
+async function startAssessment() {
+  const name = document.getElementById('childName').value.trim();
+  const ag   = document.getElementById('ageGroup').value;
+  if (!name) { alert('กรุณากรอกชื่อเด็กก่อน'); document.getElementById('childName').focus(); return; }
+  if (!ag)   { alert('กรุณาเลือกช่วงวัย'); return; }
+
+  document.getElementById('panelStep1').style.display = 'none';
+  document.getElementById('panelStep2').style.display = 'block';
+  setStep(2);
+
+  const loader = document.getElementById('loadingIndicator');
+  loader.style.display = 'block';
+  document.getElementById('questionsContainer').innerHTML = '';
+  document.getElementById('summaryCard').style.display = 'none';
+
+  questionsData = []; answersState = {}; answeredCount = 0; currentDomain = 'ALL';
+
+  try {
+    const res = await callAPI('getAssessmentData', { ageGroup: ag });
+    loader.style.display = 'none';
+
+    if (res.status === 'success' && res.data.length > 0) {
+      questionsData = res.data;
+      domainCounts  = res.domainCount || {};
+      buildDomainTabs(domainCounts, res.totalItems);
+      updateDomainSummary();
+      renderQuestions('ALL');
+      document.getElementById('summaryCard').style.display = 'block';
+      document.getElementById('progTotal').textContent = res.totalItems;
+      updateProgress();
+    } else {
+      document.getElementById('questionsContainer').innerHTML =
+        '<div class="card" style="color:var(--danger);text-align:center;">⚠️ ยังไม่มีข้อมูลคำถามในช่วงวัยนี้</div>';
+    }
+  } catch(e) {
+    loader.style.display = 'none';
+    document.getElementById('questionsContainer').innerHTML =
+      '<div class="card" style="color:var(--danger);text-align:center;">❌ เกิดข้อผิดพลาด: ' + e.message + '</div>';
+  }
+}
+
+// ============================================================
+// BUILD DOMAIN TABS
+// ============================================================
+function buildDomainTabs(counts, total) {
+  const domainMeta = {
+    GM:{ label:'GM', desc:'การเคลื่อนไหว' },
+    FM:{ label:'FM', desc:'กล้ามเนื้อมัดเล็ก' },
+    RL:{ label:'RL', desc:'เข้าใจภาษา' },
+    EL:{ label:'EL', desc:'ใช้ภาษา' },
+    PS:{ label:'PS', desc:'ช่วยเหลือตนเอง' }
+  };
+  const tabs = document.getElementById('domainTabs');
+  tabs.innerHTML = '';
+  tabs.appendChild(createTab('ALL', '📋 ทั้งหมด (' + total + ')', true));
+  Object.keys(domainMeta).forEach(d => {
+    if (counts[d] > 0) {
+      const t = createTab(d, domainMeta[d].label + ' <span class="d-count">(' + counts[d] + ')</span>', false);
+      t.classList.add('d-' + d);
+      tabs.appendChild(t);
+    }
+  });
+}
+
+function createTab(domain, labelHTML, active) {
+  const t = document.createElement('div');
+  t.className = 'domain-tab' + (active ? ' active' : '');
+  t.innerHTML = labelHTML;
+  t.onclick = function() {
+    document.querySelectorAll('.domain-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    currentDomain = domain;
+    renderQuestions(domain);
+  };
+  return t;
+}
+
+// ============================================================
+// RENDER QUESTIONS
+// ============================================================
+function renderQuestions(filterDomain) {
+  const container = document.getElementById('questionsContainer');
+  const filtered = filterDomain === 'ALL' ? questionsData :
+                   questionsData.filter(q => q.domain === filterDomain);
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);">ไม่มีข้อในด้านนี้</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(item => {
+    const origIdx = questionsData.indexOf(item);
+    const ans = answersState[origIdx];
+    let cardClass = 'q-card q-' + (item.domain || 'GM');
+    if (ans === 'ผ่าน') cardClass += ' answered-pass';
+    else if (ans === 'ไม่ผ่าน') cardClass += ' answered-fail';
+
+    const method   = item.method   ? item.method.replace(/\n/g,'<br>') : '-';
+    const training = item.training ? item.training.replace(/\n/g,'<br>') : '-';
+    const efBadge  = item.isEF ? '<span class="ef-badge">EF</span>' : '';
+    const passSelected = ans === 'ผ่าน'    ? 'selected' : '';
+    const failSelected = ans === 'ไม่ผ่าน' ? 'selected' : '';
+
+    return `
+      <div class="${cardClass}" id="card_${origIdx}">
+        <div class="q-header">
+          <span class="item-badge">ข้อ ${item.itemNo || (origIdx+1)}</span>
+          <span class="domain-pill dp-${item.domain}">${item.domain}</span>
+          ${efBadge}
+          <span class="skill-text">${item.skill}</span>
+        </div>
+        <button class="info-toggle" onclick="toggleInfo('method_${origIdx}',this)">
+          <span class="arrow">▼</span> 📌 วิธีประเมิน/เฝ้าระวัง
+        </button>
+        <div class="collapsible info-box method-box" id="method_${origIdx}">
+          <span class="info-label method-label">วิธีประเมิน</span>${method}
+        </div>
+        <button class="info-toggle" onclick="toggleInfo('train_${origIdx}',this)">
+          <span class="arrow">▼</span> 💡 วิธีฝึกทักษะ
+        </button>
+        <div class="collapsible info-box training-box" id="train_${origIdx}">
+          <span class="info-label training-label">วิธีฝึกทักษะ</span>${training}
+        </div>
+        <div class="radio-group">
+          <label class="radio-btn pass ${passSelected}" id="btn_pass_${origIdx}"
+                 onclick="selectAnswer(${origIdx}, 'ผ่าน')">
+            <input type="radio" name="q_${origIdx}" value="ผ่าน"> ✅ ผ่าน
+          </label>
+          <label class="radio-btn fail ${failSelected}" id="btn_fail_${origIdx}"
+                 onclick="selectAnswer(${origIdx}, 'ไม่ผ่าน')">
+            <input type="radio" name="q_${origIdx}" value="ไม่ผ่าน"> ❌ ไม่ผ่าน
+          </label>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+// TOGGLE INFO
+// ============================================================
+function toggleInfo(id, btn) {
+  document.getElementById(id).classList.toggle('open');
+  btn.classList.toggle('open');
+}
+
+// ============================================================
+// SELECT ANSWER
+// ============================================================
+function selectAnswer(idx, value) {
+  const wasAnswered = answersState.hasOwnProperty(idx);
+  answersState[idx] = value;
+  if (!wasAnswered) answeredCount++;
+
+  const card = document.getElementById('card_' + idx);
+  if (card) {
+    card.classList.remove('unanswered','answered-pass','answered-fail');
+    card.classList.add(value === 'ผ่าน' ? 'answered-pass' : 'answered-fail');
+    const bp = document.getElementById('btn_pass_' + idx);
+    const bf = document.getElementById('btn_fail_' + idx);
+    if (bp) bp.classList.toggle('selected', value === 'ผ่าน');
+    if (bf) bf.classList.toggle('selected', value === 'ไม่ผ่าน');
+  }
+  updateProgress();
+  updateDomainSummary();
+  updateAutoResult();
+}
+
+// ============================================================
+// PROGRESS
+// ============================================================
+function updateProgress() {
+  const total = questionsData.length;
+  const pct = total > 0 ? (answeredCount / total * 100) : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progCount').textContent = answeredCount;
+}
+
+// ============================================================
+// DOMAIN SUMMARY
+// ============================================================
+function updateDomainSummary() {
+  const dList = ['GM','FM','RL','EL','PS'];
+  const passD = {GM:0,FM:0,RL:0,EL:0,PS:0};
+  const failD = {GM:0,FM:0,RL:0,EL:0,PS:0};
+
+  questionsData.forEach((q, i) => {
+    if (answersState.hasOwnProperty(i)) {
+      if (answersState[i] === 'ผ่าน') passD[q.domain]++;
+      else failD[q.domain]++;
+    }
+  });
+
+  document.getElementById('domainSummary').innerHTML = dList.map(d => {
+    if (!domainCounts[d]) return '';
+    const cls = failD[d] > 0 ? 'has-fail' : (passD[d] === domainCounts[d] ? 'all-pass' : '');
+    return `<div class="ds-item ${cls}"><div class="ds-label">${d}</div><div class="ds-count">${passD[d]}/${domainCounts[d]}</div></div>`;
+  }).join('');
+}
+
+// ============================================================
+// AUTO RESULT
+// ============================================================
+function updateAutoResult() {
+  if (Object.keys(answersState).length < questionsData.length) return;
+  const failCount = Object.values(answersState).filter(v => v === 'ไม่ผ่าน').length;
+  const round = parseInt(document.getElementById('screeningRound').value) || 1;
+  const ar = document.getElementById('autoResult');
+  ar.classList.add('show');
+
+  if (failCount === 0) {
+    ar.className = 'auto-result show pass';
+    ar.innerHTML = '🎉 ผ่านทุกข้อ (สมวัย) — ส่งเสริมพัฒนาการต่อตามช่วงวัยถัดไป';
+  } else if (round === 1) {
+    ar.className = 'auto-result show warn';
+    ar.innerHTML = '⚠️ ไม่ผ่าน ' + failCount + ' ข้อ — สงสัยล่าช้า แนะนำกระตุ้น 30 วัน แล้วประเมินซ้ำ';
+  } else {
+    ar.className = 'auto-result show fail';
+    ar.innerHTML = '🔴 ยังไม่ผ่าน ' + failCount + ' ข้อ (รอบที่ 2) — พิจารณาส่งต่อโรงพยาบาล';
+  }
+}
+
+// ============================================================
+// VALIDATE
+// ============================================================
+function validate() {
+  const unanswered = questionsData.map((_,i) => i).filter(i => !answersState.hasOwnProperty(i));
+  if (unanswered.length > 0) {
+    // กลับไป tab ทั้งหมด
+    document.querySelectorAll('.domain-tab').forEach(x => x.classList.remove('active'));
+    document.querySelector('.domain-tab').classList.add('active');
+    currentDomain = 'ALL';
+    renderQuestions('ALL');
+    setTimeout(() => {
+      unanswered.forEach(i => {
+        const c = document.getElementById('card_' + i);
+        if (c) c.classList.add('unanswered');
+      });
+      const first = document.getElementById('card_' + unanswered[0]);
+      if (first) first.scrollIntoView({ behavior:'smooth', block:'center' });
+    }, 100);
+    showMsg('กรุณาตอบให้ครบทุกข้อ (ยังขาดอีก ' + unanswered.length + ' ข้อ)', 'error');
+    return false;
+  }
+  return true;
+}
+
+// ============================================================
+// OPEN CONFIRM MODAL
+// ============================================================
+function openConfirm() {
+  if (!validate()) return;
+
+  const name  = document.getElementById('childName').value;
+  const ag    = document.getElementById('ageGroup').value;
+  const round = document.getElementById('screeningRound').value;
+  let passCount = 0, failCount = 0;
+  const failItems = [];
+
+  questionsData.forEach((q, i) => {
+    if (answersState[i] === 'ผ่าน') passCount++;
+    else { failCount++; failItems.push({ itemNo: q.itemNo || (i+1), skill: q.skill, domain: q.domain }); }
+  });
+
+  const domR = {GM:{p:0,f:0},FM:{p:0,f:0},RL:{p:0,f:0},EL:{p:0,f:0},PS:{p:0,f:0}};
+  questionsData.forEach((q,i) => {
+    if (domR[q.domain]) { if (answersState[i]==='ผ่าน') domR[q.domain].p++; else domR[q.domain].f++; }
+  });
+
+  document.getElementById('m_name').textContent = name;
+  let ageText = ag;
+  if (childAgeMonths !== null) ageText = ag + ' (อายุจริง ' + childAgeMonths + ' เดือน)';
+  document.getElementById('m_age').textContent = ageText;
+  document.getElementById('m_round').textContent = 'รอบที่ ' + round;
+  document.getElementById('m_score').innerHTML =
+    '<span style="color:var(--pass-bdr)">✅ ' + passCount + ' ข้อ</span> / ' +
+    '<span style="color:var(--danger)">❌ ' + failCount + ' ข้อ</span>';
+
+  document.getElementById('m_domains').innerHTML =
+    ['GM','FM','RL','EL','PS'].map(d => {
+      if (!domainCounts[d]) return '';
+      const cls = domR[d].f > 0 ? 'mds-item mds-some' : (domR[d].p > 0 ? 'mds-item mds-all' : 'mds-item mds-na');
+      return `<div class="${cls}"><div class="mds-label">${d}</div>${domR[d].p}/${domainCounts[d]}</div>`;
+    }).join('');
+
+  const fs = document.getElementById('m_failSection');
+  if (failCount > 0) {
+    fs.style.display = 'block';
+    document.getElementById('m_failList').innerHTML = failItems.map(f =>
+      `<div class="fail-item"><span>ข้อ ${f.itemNo} <span class="domain-pill dp-${f.domain}" style="font-size:10px;">${f.domain}</span></span><span style="color:var(--muted);text-align:right;max-width:65%;">${f.skill}</span></div>`
+    ).join('');
+  } else {
+    fs.style.display = 'none';
+  }
+
+  const wf = document.getElementById('m_workflow');
+  const rb = document.getElementById('m_resultBadge');
+  if (failCount === 0) {
+    wf.style.display = 'none';
+    rb.innerHTML = '<span class="status-badge sb-pass">✅ สมวัย</span>';
+  } else if (round === '1') {
+    wf.style.display = 'block';
+    wf.innerHTML = '<strong>📋 แนวทางถัดไป (ตามคู่มือ DSPM)</strong>แนะนำให้พ่อแม่/ผู้ปกครองฝึกทักษะในข้อที่ไม่ผ่านบ่อยๆ เป็นเวลา <strong>30 วัน</strong> แล้วนัดประเมินซ้ำ (รอบที่ 2) หากยังไม่ผ่าน → ส่งต่อ รพ.';
+    rb.innerHTML = '<span class="status-badge sb-warn">⚠️ สงสัยล่าช้า — กระตุ้น 30 วัน</span>';
+  } else {
+    wf.style.display = 'block';
+    wf.innerHTML = '<strong>🔴 พิจารณาส่งต่อ</strong>เด็กได้รับการกระตุ้น 30 วันแล้วยังไม่ผ่าน ควรส่งต่อหน่วยบริการทุติยภูมิขึ้นไป (รพช./รพท./รพศ.) เพื่อตรวจวินิจฉัยเพิ่มเติม';
+    rb.innerHTML = '<span class="status-badge sb-fail">🔴 พัฒนาการล่าช้า — ส่งต่อ</span>';
+  }
+
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('active');
+}
+
+// ============================================================
+// SUBMIT FORM — ส่งข้อมูลไป Apps Script API
+// ============================================================
+async function submitForm() {
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+
+  const formObject = {
+    childName:      document.getElementById('childName').value,
+    childBirthdate: document.getElementById('childBirthdate').value,
+    childAgeMonths: childAgeMonths || '',
+    ageGroup:       document.getElementById('ageGroup').value,
+    screeningRound: document.getElementById('screeningRound').value,
+    assessorName:   document.getElementById('assessorName').value,
+    notes:          document.getElementById('notes').value,
+    answersJSON:    JSON.stringify(questionsData.map((_,i) => answersState[i])),
+    itemNosJSON:    JSON.stringify(questionsData.map(q => q.itemNo)),
+    domainsJSON:    JSON.stringify(questionsData.map(q => q.domain))
+  };
+
+  try {
+    const res = await callAPI('saveData', { formObject });
+    closeConfirm();
+    btn.disabled = false;
+    btn.textContent = '✅ ยืนยันบันทึก';
+
+    if (res.status === 'success') {
+      showResultPanel(res);
+    } else {
+      showMsg('เกิดข้อผิดพลาด: ' + res.message, 'error');
+    }
+  } catch(e) {
+    closeConfirm();
+    btn.disabled = false;
+    btn.textContent = '✅ ยืนยันบันทึก';
+    showMsg('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// SHOW RESULT PANEL
+// ============================================================
+function showResultPanel(res) {
+  document.getElementById('panelStep2').style.display = 'none';
+  document.getElementById('panelStep3').style.display = 'block';
+  setStep(3);
+
+  const childName = document.getElementById('childName').value;
+  const ag    = document.getElementById('ageGroup').value;
+  const round = document.getElementById('screeningRound').value;
+  const statusColor = res.resultStatus === 'สมวัย' ? 'var(--pass-bdr)' :
+                      res.resultStatus === 'สงสัยล่าช้า' ? 'var(--warn)' : 'var(--danger)';
+  const icon = res.resultStatus === 'สมวัย' ? '🎉' : res.resultStatus === 'สงสัยล่าช้า' ? '⚠️' : '🔴';
+
+  let html = `
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:40px;margin-bottom:8px;">${icon}</div>
+      <div style="font-size:18px;font-weight:800;color:${statusColor};">${res.resultText}</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:4px;">${childName} | ${ag} | รอบที่ ${round}</div>
+    </div>`;
+
+  if (res.domainResult) {
+    html += '<div style="font-weight:700;font-size:13px;color:var(--muted);margin-bottom:6px;">ผลรายด้าน</div>';
+    html += '<div class="domain-summary" style="margin-bottom:12px;">';
+    ['GM','FM','RL','EL','PS'].forEach(d => {
+      if (!domainCounts[d]) return;
+      const dr  = res.domainResult[d];
+      const cls = dr.fail > 0 ? 'ds-item has-fail' : 'ds-item all-pass';
+      html += `<div class="${cls}"><div class="ds-label">${d}</div><div class="ds-count">✅${dr.pass} ❌${dr.fail}</div></div>`;
+    });
+    html += '</div>';
+  }
+
+  if (res.resultStatus !== 'สมวัย') {
+    html += '<div class="workflow-box">';
+    html += round === '1'
+      ? '<strong>📋 ขั้นตอนต่อไป</strong>ฝึกทักษะในข้อที่ไม่ผ่านบ่อยๆ เป็นเวลา <strong>30 วัน</strong> แล้วนัดประเมินซ้ำ<br>หากยังไม่ผ่าน → ส่งต่อหน่วยบริการ'
+      : '<strong>🔴 ส่งต่อ</strong>ควรส่งต่อหน่วยบริการทุติยภูมิขึ้นไป (รพช./รพท./รพศ.) เพื่อตรวจวินิจฉัยเพิ่มเติม';
+    html += '</div>';
+  }
+
+  document.getElementById('resultFinal').innerHTML = html;
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function setStep(n) {
+  document.querySelectorAll('.step-item').forEach((s, i) => {
+    s.classList.remove('active','done');
+    if (i + 1 < n) s.classList.add('done');
+    else if (i + 1 === n) s.classList.add('active');
+  });
+}
+
+function showMsg(text, type) {
+  const mb = document.getElementById('msgBox');
+  mb.textContent = text;
+  mb.className = 'msg-box show msg-' + type;
+  mb.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function resetAll() {
+  ['panelStep2','panelStep3'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('panelStep1').style.display = 'block';
+  setStep(1);
+  ['childName','childBirthdate','notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ageGroup').value = '';
+  document.getElementById('ageBadge').style.display = 'none';
+  document.getElementById('keyAgeNotice').classList.remove('show');
+  document.getElementById('autoResult').classList.remove('show');
+  document.getElementById('msgBox').className = 'msg-box';
+  questionsData = []; answersState = {}; answeredCount = 0; childAgeMonths = null;
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+</script>
+</body>
+</html>
