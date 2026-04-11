@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตรวจสอบวันนัดหมาย</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a5276; --primary-light: #2e86c1;
+    --accent: #f39c12;  --success: #1e8449; --danger: #922b21;
+    --bg: #eaf0fb; --card: #ffffff; --text: #1a252f;
+    --muted: #7f8c8d; --border: #d5e8f5;
+    --shadow: 0 4px 24px rgba(26,82,118,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+
+  header { width: 100%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+  .header-inner { max-width: 680px; margin: 0 auto; padding: 28px 24px 24px; display: flex; align-items: center; gap: 18px; }
+  .header-icon { width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  .header-text h1 { font-family: 'Kanit', sans-serif; color: #fff; font-size: 1.45rem; font-weight: 600; line-height: 1.2; }
+  .header-text p  { color: rgba(255,255,255,0.78); font-size: 0.92rem; margin-top: 4px; }
+
+  main { width: 100%; max-width: 680px; padding: 32px 16px 60px; flex: 1; }
+
+  .card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 32px 28px; border: 1px solid var(--border); }
+  .card-title { font-family: 'Kanit', sans-serif; color: var(--primary); font-size: 1.1rem; font-weight: 500; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+
+  .input-group { margin-bottom: 16px; }
+  .input-group label { display: block; color: var(--text); font-size: 0.93rem; font-weight: 500; margin-bottom: 8px; }
+  .input-group input, .input-group textarea, .input-group select {
+    width: 100%; padding: 14px 18px;
+    border: 2px solid var(--border); border-radius: 10px;
+    font-family: 'Sarabun', sans-serif; font-size: 1.05rem;
+    color: var(--text); outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-group textarea { resize: vertical; min-height: 80px; }
+  .input-group input:focus, .input-group textarea:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(46,134,193,0.12); }
+  .input-hint { font-size: 0.83rem; color: var(--muted); margin-top: 6px; }
+  .input-error-msg { font-size: 0.83rem; color: #e74c3c; margin-top: 6px; display: none; }
+
+  .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-family: 'Kanit', sans-serif; font-size: 1.05rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; box-shadow: 0 4px 12px rgba(26,82,118,0.25); }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-warning { background: #e67e22; color: white; }
+  .btn-warning:hover:not(:disabled) { background: #ca6f1e; }
+  .btn-ghost { background: #f4f7fb; color: var(--text); border: 1.5px solid var(--border); }
+  .btn-sm { padding: 10px 18px; font-size: 0.93rem; width: auto; }
+
+  #result { margin-top: 28px; }
+
+  .alert { padding: 16px 20px; border-radius: 10px; font-size: 0.95rem; display: flex; align-items: flex-start; gap: 10px; }
+  .alert-error   { background: #fdf2f2; border: 1px solid #f1aeb5; color: var(--danger); }
+  .alert-success { background: #eafaf1; border: 1px solid #a9dfbf; color: var(--success); }
+  .alert-warning { background: #fff8e8; border: 1px solid #f5d57c; color: #7d5800; }
+
+  .result-count { font-size: 0.88rem; color: var(--muted); margin-bottom: 14px; text-align: center; }
+
+  .appt-card { background: var(--card); border-radius: 14px; border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; animation: fadeUp 0.35s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .appt-header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); padding: 16px 22px; display: flex; align-items: center; gap: 12px; }
+  .child-icon { width: 44px; height: 44px; background: rgba(255,255,255,0.18); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .appt-header h3 { font-family: 'Kanit', sans-serif; color: white; font-size: 1.1rem; font-weight: 500; }
+  .appt-header p  { color: rgba(255,255,255,0.78); font-size: 0.87rem; }
+
+  .appt-body { padding: 20px 22px; }
+  .appt-date-badge { display: inline-flex; align-items: center; gap: 8px; background: #fff8e8; border: 1.5px solid var(--accent); color: #884d00; border-radius: 8px; padding: 9px 16px; font-family: 'Kanit', sans-serif; font-size: 1.05rem; font-weight: 500; margin-bottom: 16px; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  @media (max-width: 480px) { .info-grid { grid-template-columns: 1fr; } }
+  .info-item label { font-size: 0.79rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 3px; }
+  .info-item span  { font-size: 0.97rem; color: var(--text); font-weight: 500; }
+
+  .note-box { background: #f4f8ff; border-left: 3px solid var(--primary-light); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.92rem; color: var(--text); margin-bottom: 16px; }
+  .note-box strong { color: var(--primary); font-size: 0.82rem; display: block; margin-bottom: 3px; }
+
+  .pending-banner { background: #fff8e8; border: 1.5px solid #f5d57c; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+  .pending-banner .pb-title { color: #7d5800; font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+  .pending-banner .pb-detail { color: #8a6200; font-size: 0.85rem; }
+
+  .reschedule-section { border-top: 1px solid var(--border); padding-top: 16px; }
+  .reschedule-title { font-family: 'Kanit', sans-serif; color: var(--primary); font-size: 0.97rem; font-weight: 500; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .reschedule-form .input-group { margin-bottom: 12px; }
+  .reschedule-form label { font-size: 0.87rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+  .form-actions { display: flex; gap: 10px; }
+
+  .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.35); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer { text-align: center; padding: 20px; color: var(--muted); font-size: 0.82rem; }
+  footer a { color: var(--primary-light); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-icon">🏥</div>
+    <div class="header-text">
+      <h1>ระบบตรวจสอบวันนัดหมาย</h1>
+      <p>กรอกเลขบัตรประชาชนเพื่อดูวันนัดหมายของบุตร</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-title">🔍 ค้นหาวันนัดหมาย</div>
+    <div class="input-group">
+      <label for="idCard">เลขบัตรประชาชน (บิดา/มารดา) <span style="color:#e74c3c">*</span></label>
+      <input type="text" id="idCard" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17" inputmode="numeric" autocomplete="off">
+      <div class="input-hint">กรอกเลขบัตรประชาชน 13 หลักของบิดาหรือมารดา</div>
+      <div class="input-error-msg" id="idError"></div>
+    </div>
+    <button class="btn btn-primary" id="searchBtn" onclick="search()">🔎 ตรวจสอบวันนัดหมาย</button>
+  </div>
+
+  <div id="result"></div>
+</main>
+
+<footer>&copy; ระบบนัดหมาย &nbsp;|&nbsp; <a href="admin.html">สำหรับเจ้าหน้าที่</a></footer>
+
+<!-- โหลด config ก่อน จากนั้นโหลด script หลัก -->
+<script src="config.js"></script>
+<script>
+  const idInput   = document.getElementById('idCard');
+  const resultDiv = document.getElementById('result');
+  const searchBtn = document.getElementById('searchBtn');
+  const idError   = document.getElementById('idError');
+
+  idInput.addEventListener('input', function () {
+    var digits = this.value.replace(/\D/g, '').slice(0, 13);
+    var f = '';
+    if (digits.length > 0)  f  = digits.slice(0, 1);
+    if (digits.length > 1)  f += '-' + digits.slice(1, 5);
+    if (digits.length > 5)  f += '-' + digits.slice(5, 10);
+    if (digits.length > 10) f += '-' + digits.slice(10, 12);
+    if (digits.length > 12) f += '-' + digits.slice(12, 13);
+    this.value = f;
+    clearError();
+  });
+  idInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
+
+  function validateThaiId(id) {
+    if (!id || id.length !== 13 || !/^\d{13}$/.test(id)) return false;
+    var sum = 0;
+    for (var i = 0; i < 12; i++) sum += parseInt(id[i]) * (13 - i);
+    return (11 - (sum % 11)) % 10 === parseInt(id[12]);
+  }
+
+  function showError(msg) { idInput.classList.add('error'); idError.textContent = msg; idError.style.display = 'block'; }
+  function clearError() { idInput.classList.remove('error'); idError.style.display = 'none'; }
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ─── SEARCH ───────────────────────────────────────────────
+  // เปลี่ยนจาก google.script.run → callAPI() จาก config.js
+  async function search() {
+    clearError();
+    resultDiv.innerHTML = '';
+    var raw = idInput.value.replace(/\D/g, '');
+    if (raw.length !== 13) { showError('กรุณากรอกเลขบัตรประชาชน 13 หลักให้ครบถ้วน'); return; }
+    if (!validateThaiId(raw)) { showError('เลขบัตรประชาชนไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง'); return; }
+
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<span class="spinner"></span> กำลังค้นหา...';
+
+    try {
+      const res = await callAPI('lookupAppointment', { idCard: raw });
+      handleResult(res);
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  function handleResult(res) {
+    searchBtn.disabled = false;
+    searchBtn.innerHTML = '🔎 ตรวจสอบวันนัดหมาย';
+
+    if (!res.success) {
+      resultDiv.innerHTML = '<div class="alert alert-error">❌ ' + escHtml(res.message) + '</div>';
+      return;
+    }
+
+    var html = '<div class="result-count">✅ พบ ' + res.data.length + ' รายการนัดหมาย</div>';
+    res.data.forEach(function (d, i) {
+      var pendingBanner = '';
+      if (d.pendingRequest) {
+        pendingBanner = '<div class="pending-banner">'
+          + '<div class="pb-title">⏳ มีคำขอเลื่อนนัดรออนุมัติ</div>'
+          + '<div class="pb-detail">ขอเลื่อนเป็น: ' + escHtml(d.pendingRequest.requestedDate)
+          + (d.pendingRequest.requestedTime ? ' ' + escHtml(d.pendingRequest.requestedTime) : '')
+          + ' | เหตุผล: ' + escHtml(d.pendingRequest.reason) + '</div>'
+          + '</div>';
+      }
+
+      var rescheduleSection = d.pendingRequest ? '' : buildRescheduleForm(d, i);
+
+      html += '<div class="appt-card" style="animation-delay:' + (i * 0.08) + 's">'
+        + '<div class="appt-header">'
+        + '<div class="child-icon">👶</div>'
+        + '<div><h3>' + escHtml(d.childName || '-') + '</h3>'
+        + '<p>ผู้ปกครอง: ' + escHtml(d.parentName || '-') + '</p></div>'
+        + '</div>'
+        + '<div class="appt-body">'
+        + '<div class="appt-date-badge">📅 วันนัดหมาย: ' + escHtml(d.appointmentDate || '-')
+        + (d.appointmentTime ? ' &nbsp;⏰ ' + escHtml(d.appointmentTime) : '') + '</div>'
+        + '<div class="info-grid">'
+        + '<div class="info-item"><label>วันเกิดเด็ก</label><span>' + escHtml(d.childBirthdate || '-') + '</span></div>'
+        + '<div class="info-item"><label>สถานที่ / ห้อง</label><span>' + escHtml(d.location || '-') + '</span></div>'
+        + '</div>'
+        + (d.note ? '<div class="note-box"><strong>📌 หมายเหตุ</strong>' + escHtml(d.note) + '</div>' : '')
+        + pendingBanner
+        + rescheduleSection
+        + '</div></div>';
+    });
+
+    resultDiv.innerHTML = html;
+    window._apptData = res.data;
+  }
+
+  function buildRescheduleForm(d, idx) {
+    return '<div class="reschedule-section" id="rsSection_' + idx + '">'
+      + '<div class="reschedule-title">📆 ขอเลื่อนวันนัดหมาย</div>'
+      + '<div id="rsBtnWrap_' + idx + '">'
+      + '<button class="btn btn-warning btn-sm" onclick="showRsForm(' + idx + ')">📋 กรอกคำขอเลื่อนนัด</button>'
+      + '</div>'
+      + '<div class="reschedule-form" id="rsForm_' + idx + '" style="display:none">'
+      + '<div class="form-row">'
+      + '<div class="input-group"><label>วันที่ต้องการเลื่อนเป็น <span style="color:#e74c3c">*</span></label>'
+      + '<input type="date" id="rsDate_' + idx + '" min="' + getTomorrow() + '"></div>'
+      + '<div class="input-group"><label>เวลาที่ต้องการ</label>'
+      + '<input type="time" id="rsTime_' + idx + '"></div>'
+      + '</div>'
+      + '<div class="input-group"><label>เหตุผลในการเลื่อนนัด <span style="color:#e74c3c">*</span></label>'
+      + '<textarea id="rsReason_' + idx + '" placeholder="เช่น ติดธุระเร่งด่วน, เด็กป่วย..."></textarea></div>'
+      + '<div id="rsAlert_' + idx + '"></div>'
+      + '<div class="form-actions">'
+      + '<button class="btn btn-primary btn-sm" id="rsSubmitBtn_' + idx + '" onclick="submitReschedule(' + idx + ')">📤 ส่งคำขอเลื่อนนัด</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="hideRsForm(' + idx + ')">ยกเลิก</button>'
+      + '</div></div>'
+      + '</div>';
+  }
+
+  function showRsForm(idx) {
+    document.getElementById('rsBtnWrap_' + idx).style.display = 'none';
+    document.getElementById('rsForm_' + idx).style.display = 'block';
+  }
+  function hideRsForm(idx) {
+    document.getElementById('rsBtnWrap_' + idx).style.display = 'block';
+    document.getElementById('rsForm_' + idx).style.display = 'none';
+  }
+
+  function getTomorrow() {
+    var d = new Date(); d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  }
+
+  // ─── SUBMIT RESCHEDULE ────────────────────────────────────
+  // เปลี่ยนจาก google.script.run → callAPI()
+  async function submitReschedule(idx) {
+    var d      = window._apptData[idx];
+    var date   = document.getElementById('rsDate_' + idx).value;
+    var time   = document.getElementById('rsTime_' + idx).value;
+    var reason = document.getElementById('rsReason_' + idx).value.trim();
+    var alertEl = document.getElementById('rsAlert_' + idx);
+    var btn     = document.getElementById('rsSubmitBtn_' + idx);
+
+    if (!date)   { showRsAlert(alertEl, false, 'กรุณาเลือกวันที่ต้องการเลื่อนนัด'); return; }
+    if (!reason) { showRsAlert(alertEl, false, 'กรุณากรอกเหตุผลในการเลื่อนนัด'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> กำลังส่ง...';
+
+    try {
+      const res = await callAPI('submitRescheduleRequest', {
+        payload: {
+          parentId:      d.parentId,
+          rowIndex:      d.rowIndex,
+          requestedDate: date,
+          requestedTime: time,
+          reason:        reason
+        }
+      });
+      btn.disabled = false;
+      btn.innerHTML = '📤 ส่งคำขอเลื่อนนัด';
+      showRsAlert(alertEl, res.success, res.message);
+      if (res.success) {
+        btn.style.display = 'none';
+        document.getElementById('rsDate_' + idx).disabled = true;
+        document.getElementById('rsTime_' + idx).disabled = true;
+        document.getElementById('rsReason_' + idx).disabled = true;
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '📤 ส่งคำขอเลื่อนนัด';
+      showRsAlert(alertEl, false, 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่');
+    }
+  }
+
+  function showRsAlert(el, success, msg) {
+    el.innerHTML = '<div class="alert alert-' + (success ? 'success' : 'error') + '" style="margin-top:12px">'
+      + (success ? '✅' : '❌') + ' ' + escHtml(msg) + '</div>';
+  }
+
+  function handleError(err) {
+    searchBtn.disabled = false;
+    searchBtn.innerHTML = '🔎 ตรวจสอบวันนัดหมาย';
+    resultDiv.innerHTML = '<div class="alert alert-error">⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง</div>';
+    console.error(err);
+  }
+</script>
+</body>
+</html>

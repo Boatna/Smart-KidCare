@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - ระบบนัดหมาย</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a5276; --primary-light: #2e86c1;
+    --accent: #f39c12; --success: #1e8449; --danger: #922b21;
+    --danger-light: #e74c3c; --bg: #f0f3f8; --card: #ffffff;
+    --text: #1a252f; --muted: #7f8c8d; --border: #d5e8f5;
+    --shadow: 0 4px 24px rgba(26,82,118,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--bg); min-height: 100vh; }
+
+  /* ─── LOGIN ─── */
+  #loginOverlay { position: fixed; inset: 0; background: linear-gradient(135deg, var(--primary), #154360); display: flex; align-items: center; justify-content: center; z-index: 999; }
+  .login-box { background: white; border-radius: 20px; padding: 40px 36px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
+  .login-logo { font-size: 48px; margin-bottom: 12px; }
+  .login-box h2 { font-family: 'Kanit', sans-serif; color: var(--primary); font-size: 1.3rem; margin-bottom: 6px; }
+  .login-box p  { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+  .login-box input { width: 100%; padding: 13px 16px; border: 2px solid var(--border); border-radius: 10px; font-family: 'Sarabun', sans-serif; font-size: 1rem; outline: none; margin-bottom: 14px; transition: border-color 0.2s; }
+  .login-box input:focus { border-color: var(--primary-light); }
+  .login-error { color: var(--danger-light); font-size: 0.88rem; margin-bottom: 12px; min-height: 20px; }
+
+  /* ─── HEADER ─── */
+  header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+  .header-inner { max-width: 1100px; margin: 0 auto; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-icon { width: 48px; height: 48px; background: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  header h1 { font-family: 'Kanit', sans-serif; color: white; font-size: 1.25rem; font-weight: 600; }
+  header p  { color: rgba(255,255,255,0.75); font-size: 0.86rem; }
+  .logout-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-family: 'Sarabun', sans-serif; font-size: 0.9rem; transition: background 0.2s; }
+  .logout-btn:hover { background: rgba(255,255,255,0.25); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 16px 60px; }
+
+  /* ─── TABS ─── */
+  .tabs { display: flex; gap: 4px; background: white; border-radius: 12px; padding: 6px; box-shadow: var(--shadow); margin-bottom: 24px; border: 1px solid var(--border); width: fit-content; flex-wrap: wrap; }
+  .tab-btn { padding: 10px 20px; border: none; border-radius: 8px; font-family: 'Kanit', sans-serif; font-size: 0.92rem; cursor: pointer; transition: all 0.2s; color: var(--muted); background: transparent; }
+  .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 8px rgba(26,82,118,0.25); }
+  .badge-count { display: inline-block; background: #e74c3c; color: white; border-radius: 10px; padding: 1px 7px; font-size: 0.72rem; margin-left: 4px; font-weight: 600; }
+  .tab-btn.active .badge-count { background: rgba(255,255,255,0.3); }
+
+  /* ─── CARDS ─── */
+  .card { background: white; border-radius: 16px; box-shadow: var(--shadow); padding: 28px; border: 1px solid var(--border); margin-bottom: 20px; }
+  .card-title { font-family: 'Kanit', sans-serif; color: var(--primary); font-size: 1.05rem; font-weight: 500; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+
+  /* ─── FORM ─── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label { font-size: 0.87rem; color: var(--text); font-weight: 500; }
+  .form-group .req { color: var(--danger-light); }
+  .form-group input, .form-group textarea {
+    padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 9px;
+    font-family: 'Sarabun', sans-serif; font-size: 0.97rem; color: var(--text);
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group textarea:focus { border-color: var(--primary-light); }
+  .form-group textarea { resize: vertical; min-height: 70px; }
+
+  /* ─── BUTTONS ─── */
+  .btn { padding: 11px 22px; border: none; border-radius: 9px; font-family: 'Kanit', sans-serif; font-size: 0.97rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-primary { background: var(--primary); color: white; box-shadow: 0 3px 10px rgba(26,82,118,0.2); }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-light); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-danger  { background: var(--danger-light); color: white; }
+  .btn-danger:hover:not(:disabled) { background: var(--danger); }
+  .btn-ghost   { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-sm      { padding: 6px 14px; font-size: 0.85rem; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .form-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+  /* ─── ALERTS ─── */
+  .alert { padding: 13px 18px; border-radius: 9px; display: flex; align-items: center; gap: 8px; font-size: 0.93rem; margin-top: 14px; }
+  .alert-success { background: #eafaf1; border: 1px solid #a9dfbf; color: var(--success); }
+  .alert-error   { background: #fdf2f2; border: 1px solid #f1aeb5; color: var(--danger); }
+
+  /* ─── TABLE ─── */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  thead th { background: var(--primary); color: white; padding: 12px 14px; text-align: left; font-family: 'Kanit', sans-serif; font-weight: 500; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f7faff; }
+  td { padding: 11px 14px; color: var(--text); vertical-align: middle; }
+  .td-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+
+  .table-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .search-box { padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-family: 'Sarabun', sans-serif; font-size: 0.95rem; outline: none; width: 260px; transition: border-color 0.2s; }
+  .search-box:focus { border-color: var(--primary-light); }
+
+  /* ─── STATUS BADGES ─── */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; }
+  .badge-date    { background: #fff3cd; color: #856404; }
+  .badge-pending { background: #fff3cd; color: #856404; }
+  .badge-approve { background: #d4edda; color: #155724; }
+  .badge-reject  { background: #f8d7da; color: #721c24; }
+
+  /* ─── REQUEST CARDS ─── */
+  .req-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .req-card.pending { border-left: 4px solid #f39c12; }
+  .req-card.approve { border-left: 4px solid var(--success); }
+  .req-card.reject  { border-left: 4px solid var(--danger-light); }
+  .req-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+  .req-name { font-family: 'Kanit', sans-serif; font-size: 1rem; color: var(--primary); }
+  .req-meta  { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; font-size: 0.87rem; color: var(--text); margin-bottom: 10px; }
+  .req-meta .label { color: var(--muted); font-size: 0.8rem; }
+  .req-reason { background: #f7f9fc; border-radius: 6px; padding: 8px 12px; font-size: 0.87rem; color: var(--text); margin-bottom: 10px; }
+  .req-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .admin-note-input { width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 7px; font-family: 'Sarabun', sans-serif; font-size: 0.9rem; outline: none; margin-bottom: 8px; }
+  .admin-note-input:focus { border-color: var(--primary-light); }
+
+  /* ─── MODAL ─── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: modalIn 0.2s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  .modal-title { font-family: 'Kanit', sans-serif; color: var(--primary); font-size: 1.1rem; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+
+  .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.35); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .record-count { font-size: 0.85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">🔐</div>
+    <h2>เข้าสู่ระบบเจ้าหน้าที่</h2>
+    <p>กรุณากรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
+    <input type="password" id="passwordInput" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')login()">
+    <div class="login-error" id="loginError"></div>
+    <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center" onclick="login()">🔓 เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="header-icon">⚕️</div>
+      <div>
+        <h1>ระบบจัดการนัดหมาย (แอดมิน)</h1>
+        <p>จัดการข้อมูลนัดหมายและคำขอเลื่อนนัด</p>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+  </div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabAdd"     onclick="showTab('add')">➕ เพิ่มนัดหมาย</button>
+    <button class="tab-btn"        id="tabList"    onclick="showTab('list')">📋 รายการทั้งหมด</button>
+    <button class="tab-btn"        id="tabRequest" onclick="showTab('request')">
+      📩 คำขอเลื่อนนัด <span class="badge-count" id="pendingCount" style="display:none">0</span>
+    </button>
+  </div>
+
+  <!-- ─── ADD TAB ─── -->
+  <div id="tab-add">
+    <div class="card">
+      <div class="card-title">📝 เพิ่มนัดหมายใหม่</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>เลขบัตรประชาชน (พ่อ/แม่) <span class="req">*</span></label>
+          <input type="text" id="f-parentId" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label>ชื่อ-นามสกุล (พ่อ/แม่)</label>
+          <input type="text" id="f-parentName" placeholder="ชื่อ นามสกุล">
+        </div>
+        <div class="form-group">
+          <label>ชื่อเด็ก <span class="req">*</span></label>
+          <input type="text" id="f-childName" placeholder="ชื่อ นามสกุล">
+        </div>
+        <div class="form-group">
+          <label>วันเกิดเด็ก</label>
+          <input type="date" id="f-childBirthdate">
+        </div>
+        <div class="form-group">
+          <label>วันนัดหมาย <span class="req">*</span></label>
+          <input type="date" id="f-appointmentDate">
+        </div>
+        <div class="form-group">
+          <label>เวลานัดหมาย</label>
+          <input type="time" id="f-appointmentTime">
+        </div>
+        <div class="form-group">
+          <label>สถานที่ / ห้อง</label>
+          <input type="text" id="f-location" placeholder="เช่น ห้อง OPD1">
+        </div>
+        <div class="form-group full">
+          <label>หมายเหตุ</label>
+          <textarea id="f-note" placeholder="หมายเหตุเพิ่มเติม..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="addBtn" onclick="submitAdd()">💾 บันทึกนัดหมาย</button>
+        <button class="btn btn-ghost"   onclick="clearAddForm()">🗑️ ล้างข้อมูล</button>
+      </div>
+      <div id="addAlert"></div>
+    </div>
+  </div>
+
+  <!-- ─── LIST TAB ─── -->
+  <div id="tab-list" style="display:none">
+    <div class="card">
+      <div class="card-title">📋 รายการนัดหมายทั้งหมด <span class="record-count" id="recordCount"></span></div>
+      <div class="table-toolbar">
+        <input type="text" class="search-box" id="searchInput" placeholder="🔍 ค้นหา ชื่อ / เลขบัตร / วันนัด..." oninput="filterTable()">
+        <button class="btn btn-primary btn-sm" onclick="loadAll()">🔄 โหลดข้อมูล</button>
+      </div>
+      <div id="tableArea">
+        <div class="empty-state"><div class="empty-icon">📂</div><p>กด "โหลดข้อมูล" เพื่อแสดงรายการ</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REQUEST TAB ─── -->
+  <div id="tab-request" style="display:none">
+    <div class="card">
+      <div class="card-title">📩 คำขอเลื่อนนัดหมาย</div>
+      <div class="table-toolbar">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" id="filterAll"     onclick="filterRequests('all')"     style="border-color:var(--primary);color:var(--primary)">ทั้งหมด</button>
+          <button class="btn btn-ghost btn-sm" id="filterPending" onclick="filterRequests('pending')">⏳ รออนุมัติ</button>
+          <button class="btn btn-ghost btn-sm" id="filterDone"    onclick="filterRequests('done')">✅ ดำเนินการแล้ว</button>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="loadRequests()">🔄 โหลดข้อมูล</button>
+      </div>
+      <div id="requestArea">
+        <div class="empty-state"><div class="empty-icon">📂</div><p>กด "โหลดข้อมูล" เพื่อแสดงคำขอ</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ แก้ไขนัดหมาย</div>
+    <input type="hidden" id="e-rowIndex">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>เลขบัตรประชาชน (พ่อ/แม่) <span class="req">*</span></label>
+        <input type="text" id="e-parentId" maxlength="17" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล (พ่อ/แม่)</label>
+        <input type="text" id="e-parentName">
+      </div>
+      <div class="form-group">
+        <label>ชื่อเด็ก <span class="req">*</span></label>
+        <input type="text" id="e-childName">
+      </div>
+      <div class="form-group">
+        <label>วันเกิดเด็ก</label>
+        <input type="date" id="e-childBirthdate">
+      </div>
+      <div class="form-group">
+        <label>วันนัดหมาย <span class="req">*</span></label>
+        <input type="date" id="e-appointmentDate">
+      </div>
+      <div class="form-group">
+        <label>เวลานัดหมาย</label>
+        <input type="time" id="e-appointmentTime">
+      </div>
+      <div class="form-group">
+        <label>สถานที่ / ห้อง</label>
+        <input type="text" id="e-location">
+      </div>
+      <div class="form-group full">
+        <label>หมายเหตุ</label>
+        <textarea id="e-note"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-success" id="saveEditBtn" onclick="saveEdit()">💾 บันทึกการแก้ไข</button>
+      <button class="btn btn-ghost" onclick="closeModal()">ยกเลิก</button>
+    </div>
+    <div id="editAlert"></div>
+  </div>
+</div>
+
+<!-- โหลด config ก่อน จากนั้นโหลด script หลัก -->
+<script src="config.js"></script>
+<script>
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+var adminPassword   = '';
+var allData         = [];
+var displayData     = [];
+var allRequests     = [];
+var displayRequests = [];
+var reqFilter       = 'all';
+
+// ════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function validateThaiId(id) {
+  if (!id || id.length !== 13 || !/^\d{13}$/.test(id)) return false;
+  var sum = 0;
+  for (var i = 0; i < 12; i++) sum += parseInt(id[i]) * (13 - i);
+  return (11 - (sum % 11)) % 10 === parseInt(id[12]);
+}
+function dateToISO(val) {
+  if (!val) return '';
+  val = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+    var p = val.split('/'), d = p[0], m = p[1], y = parseInt(p[2]);
+    if (y > 2400) y -= 543;
+    return y + '-' + m + '-' + d;
+  }
+  return '';
+}
+function applyIdFormat(input) {
+  var digits = input.value.replace(/\D/g, '').slice(0, 13);
+  var f = '';
+  if (digits.length > 0)  f  = digits.slice(0, 1);
+  if (digits.length > 1)  f += '-' + digits.slice(1, 5);
+  if (digits.length > 5)  f += '-' + digits.slice(5, 10);
+  if (digits.length > 10) f += '-' + digits.slice(10, 12);
+  if (digits.length > 12) f += '-' + digits.slice(12, 13);
+  input.value = f;
+}
+function showAlert(id, success, msg) {
+  var el = document.getElementById(id);
+  el.innerHTML = '<div class="alert alert-' + (success ? 'success' : 'error') + '">'
+    + (success ? '✅' : '❌') + ' ' + escHtml(msg) + '</div>';
+  if (success) setTimeout(function () { el.innerHTML = ''; }, 3500);
+}
+
+document.getElementById('f-parentId').addEventListener('input', function () { applyIdFormat(this); });
+document.getElementById('e-parentId').addEventListener('input', function () { applyIdFormat(this); });
+
+// ════════════════════════════════════════
+// AUTH — เปลี่ยนจาก google.script.run → callAPI()
+// ════════════════════════════════════════
+async function login() {
+  var pw  = document.getElementById('passwordInput').value;
+  var btn = document.getElementById('loginBtn');
+  var err = document.getElementById('loginError');
+  if (!pw) { err.textContent = 'กรุณากรอกรหัสผ่าน'; return; }
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังตรวจสอบ...';
+  err.textContent = '';
+
+  try {
+    const res = await callAPI('verifyAdmin', { password: pw });
+    btn.disabled = false; btn.innerHTML = '🔓 เข้าสู่ระบบ';
+    if (res.valid) {
+      adminPassword = pw;
+      document.getElementById('loginOverlay').style.display = 'none';
+      loadRequests();
+    } else {
+      err.textContent = '❌ รหัสผ่านไม่ถูกต้อง';
+      document.getElementById('passwordInput').focus();
+    }
+  } catch (e) {
+    btn.disabled = false; btn.innerHTML = '🔓 เข้าสู่ระบบ';
+    err.textContent = '⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ';
+  }
+}
+
+function logout() {
+  adminPassword = ''; allData = []; displayData = []; allRequests = []; displayRequests = [];
+  document.getElementById('passwordInput').value = '';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('tableArea').innerHTML   = '<div class="empty-state"><div class="empty-icon">📂</div><p>กด "โหลดข้อมูล" เพื่อแสดงรายการ</p></div>';
+  document.getElementById('requestArea').innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><p>กด "โหลดข้อมูล" เพื่อแสดงคำขอ</p></div>';
+  document.getElementById('recordCount').textContent = '';
+  document.getElementById('pendingCount').style.display = 'none';
+}
+
+// ════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════
+function showTab(name) {
+  ['add','list','request'].forEach(function (t) {
+    document.getElementById('tab-' + t).style.display  = t === name ? '' : 'none';
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === name);
+  });
+  if (name === 'list')    loadAll();
+  if (name === 'request') loadRequests();
+}
+
+// ════════════════════════════════════════
+// ADD
+// ════════════════════════════════════════
+async function submitAdd() {
+  var parentId = document.getElementById('f-parentId').value;
+  var childName = document.getElementById('f-childName').value.trim();
+  var apptDate  = document.getElementById('f-appointmentDate').value;
+  var idClean   = parentId.replace(/\D/g, '');
+  if (idClean.length !== 13) { showAlert('addAlert', false, 'เลขบัตรประชาชนต้องมี 13 หลัก'); return; }
+  if (!validateThaiId(idClean)) { showAlert('addAlert', false, 'เลขบัตรประชาชนไม่ถูกต้อง'); return; }
+  if (!childName) { showAlert('addAlert', false, 'กรุณากรอกชื่อเด็ก'); return; }
+  if (!apptDate) { showAlert('addAlert', false, 'กรุณาเลือกวันนัดหมาย'); return; }
+
+  var record = {
+    parentId: parentId, parentName: document.getElementById('f-parentName').value,
+    childName: childName, childBirthdate: document.getElementById('f-childBirthdate').value,
+    appointmentDate: apptDate, appointmentTime: document.getElementById('f-appointmentTime').value,
+    location: document.getElementById('f-location').value, note: document.getElementById('f-note').value
+  };
+  var btn = document.getElementById('addBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...';
+
+  try {
+    const res = await callAPI('addAppointment', { password: adminPassword, record });
+    btn.disabled = false; btn.innerHTML = '💾 บันทึกนัดหมาย';
+    showAlert('addAlert', res.success, res.message);
+    if (res.success) clearAddForm();
+  } catch (e) {
+    btn.disabled = false; btn.innerHTML = '💾 บันทึกนัดหมาย';
+    showAlert('addAlert', false, 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
+  }
+}
+
+function clearAddForm() {
+  ['f-parentId','f-parentName','f-childName','f-childBirthdate','f-appointmentDate','f-appointmentTime','f-location','f-note']
+    .forEach(function (id) { document.getElementById(id).value = ''; });
+  document.getElementById('addAlert').innerHTML = '';
+}
+
+// ════════════════════════════════════════
+// LIST
+// ════════════════════════════════════════
+async function loadAll() {
+  document.getElementById('tableArea').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>กำลังโหลดข้อมูล...</p></div>';
+  try {
+    const res = await callAPI('getAllAppointments', { password: adminPassword });
+    if (!res.success) {
+      document.getElementById('tableArea').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>' + escHtml(res.message) + '</p></div>';
+      return;
+    }
+    allData = res.data; filterTable();
+  } catch (e) {
+    document.getElementById('tableArea').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>เกิดข้อผิดพลาดในการเชื่อมต่อ</p></div>';
+  }
+}
+
+function filterTable() {
+  var q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  displayData = !q ? allData.slice() : allData.filter(function (d) {
+    return (d.parentId || '').includes(q)
+        || (d.parentName || '').toLowerCase().includes(q)
+        || (d.childName || '').toLowerCase().includes(q)
+        || (d.appointmentDate || '').includes(q)
+        || (d.location || '').toLowerCase().includes(q);
+  });
+  renderTable(displayData);
+}
+
+function renderTable(data) {
+  document.getElementById('recordCount').textContent = data.length ? '(' + data.length + ' รายการ)' : '';
+  if (!data.length) {
+    document.getElementById('tableArea').innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>ไม่พบข้อมูลนัดหมาย</p></div>';
+    return;
+  }
+  var html = '<div class="table-wrap"><table><thead><tr>'
+    + '<th>#</th><th>เลขบัตร</th><th>ผู้ปกครอง</th><th>ชื่อเด็ก</th>'
+    + '<th>วันนัด</th><th>เวลา</th><th>สถานที่</th><th>จัดการ</th>'
+    + '</tr></thead><tbody>';
+  data.forEach(function (d, i) {
+    html += '<tr><td>' + (i + 1) + '</td>'
+      + '<td style="font-family:monospace;font-size:0.85rem">' + escHtml(d.parentId) + '</td>'
+      + '<td>' + escHtml(d.parentName || '-') + '</td>'
+      + '<td><strong>' + escHtml(d.childName || '-') + '</strong></td>'
+      + '<td><span class="badge badge-date">📅 ' + escHtml(d.appointmentDate || '-') + '</span></td>'
+      + '<td>' + escHtml(d.appointmentTime || '-') + '</td>'
+      + '<td>' + escHtml(d.location || '-') + '</td>'
+      + '<td><div class="td-actions">'
+      + '<button class="btn btn-primary btn-sm" onclick="openEdit(' + i + ')">✏️ แก้ไข</button>'
+      + '<button class="btn btn-danger btn-sm"  onclick="confirmDelete(' + i + ')">🗑️</button>'
+      + '</div></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('tableArea').innerHTML = html;
+}
+
+// ════════════════════════════════════════
+// EDIT
+// ════════════════════════════════════════
+function openEdit(index) {
+  var d = displayData[index]; if (!d) return;
+  document.getElementById('e-rowIndex').value       = d.rowIndex;
+  document.getElementById('e-parentId').value        = d.parentId;
+  document.getElementById('e-parentName').value      = d.parentName || '';
+  document.getElementById('e-childName').value       = d.childName || '';
+  document.getElementById('e-childBirthdate').value  = dateToISO(d.childBirthdate);
+  document.getElementById('e-appointmentDate').value = dateToISO(d.appointmentDate);
+  document.getElementById('e-appointmentTime').value = d.appointmentTime || '';
+  document.getElementById('e-location').value        = d.location || '';
+  document.getElementById('e-note').value            = d.note || '';
+  document.getElementById('editAlert').innerHTML     = '';
+  var btn = document.getElementById('saveEditBtn');
+  btn.disabled = false; btn.innerHTML = '💾 บันทึกการแก้ไข';
+  document.getElementById('editModal').classList.add('open');
+}
+function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+
+async function saveEdit() {
+  var parentId  = document.getElementById('e-parentId').value;
+  var childName = document.getElementById('e-childName').value.trim();
+  var apptDate  = document.getElementById('e-appointmentDate').value;
+  var idClean   = parentId.replace(/\D/g, '');
+  if (idClean.length !== 13)    { showAlert('editAlert', false, 'เลขบัตรประชาชนต้องมี 13 หลัก'); return; }
+  if (!validateThaiId(idClean)) { showAlert('editAlert', false, 'เลขบัตรประชาชนไม่ถูกต้อง'); return; }
+  if (!childName) { showAlert('editAlert', false, 'กรุณากรอกชื่อเด็ก'); return; }
+  if (!apptDate)  { showAlert('editAlert', false, 'กรุณาเลือกวันนัดหมาย'); return; }
+
+  var rowIndex = document.getElementById('e-rowIndex').value;
+  var record = {
+    parentId: parentId, parentName: document.getElementById('e-parentName').value,
+    childName: childName, childBirthdate: document.getElementById('e-childBirthdate').value,
+    appointmentDate: apptDate, appointmentTime: document.getElementById('e-appointmentTime').value,
+    location: document.getElementById('e-location').value, note: document.getElementById('e-note').value
+  };
+  var btn = document.getElementById('saveEditBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก...';
+
+  try {
+    const res = await callAPI('updateAppointment', { password: adminPassword, rowIndex, record });
+    btn.disabled = false; btn.innerHTML = '💾 บันทึกการแก้ไข';
+    showAlert('editAlert', res.success, res.message);
+    if (res.success) { loadAll(); setTimeout(closeModal, 1500); }
+  } catch (e) {
+    btn.disabled = false; btn.innerHTML = '💾 บันทึกการแก้ไข';
+    showAlert('editAlert', false, 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
+  }
+}
+
+async function confirmDelete(index) {
+  var d = displayData[index]; if (!d) return;
+  if (!confirm('ยืนยันการลบนัดหมายของ "' + (d.childName || '-') + '" ?\nการดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
+  try {
+    const res = await callAPI('deleteAppointment', { password: adminPassword, rowIndex: d.rowIndex });
+    res.success ? loadAll() : alert('❌ ' + res.message);
+  } catch (e) {
+    alert('⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ');
+  }
+}
+
+// ════════════════════════════════════════
+// RESCHEDULE REQUESTS
+// ════════════════════════════════════════
+async function loadRequests() {
+  document.getElementById('requestArea').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>กำลังโหลดข้อมูล...</p></div>';
+  try {
+    const res = await callAPI('getAllRescheduleRequests', { password: adminPassword });
+    if (!res.success) {
+      document.getElementById('requestArea').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>' + escHtml(res.message) + '</p></div>';
+      return;
+    }
+    allRequests = res.data;
+    var pending = allRequests.filter(function (r) { return r.status === 'รออนุมัติ'; }).length;
+    var badge   = document.getElementById('pendingCount');
+    if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+    filterRequests(reqFilter);
+  } catch (e) {
+    document.getElementById('requestArea').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>เกิดข้อผิดพลาดในการเชื่อมต่อ</p></div>';
+  }
+}
+
+function filterRequests(filter) {
+  reqFilter = filter;
+  ['all','pending','done'].forEach(function (f) {
+    var el = document.getElementById('filter' + f.charAt(0).toUpperCase() + f.slice(1));
+    el.style.backgroundColor = f === filter ? 'var(--primary)' : '';
+    el.style.color = f === filter ? 'white' : '';
+  });
+  if (filter === 'pending') {
+    displayRequests = allRequests.filter(function (r) { return r.status === 'รออนุมัติ'; });
+  } else if (filter === 'done') {
+    displayRequests = allRequests.filter(function (r) { return r.status !== 'รออนุมัติ'; });
+  } else {
+    displayRequests = allRequests.slice();
+  }
+  renderRequests(displayRequests);
+}
+
+function renderRequests(data) {
+  if (!data.length) {
+    document.getElementById('requestArea').innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>ไม่พบคำขอเลื่อนนัด</p></div>';
+    return;
+  }
+  var html = '';
+  data.forEach(function (r, i) {
+    var statusBadge = '', cls = 'pending';
+    if (r.status === 'รออนุมัติ') {
+      statusBadge = '<span class="badge badge-pending">⏳ รออนุมัติ</span>'; cls = 'pending';
+    } else if (r.status === 'อนุมัติ') {
+      statusBadge = '<span class="badge badge-approve">✅ อนุมัติแล้ว</span>'; cls = 'approve';
+    } else {
+      statusBadge = '<span class="badge badge-reject">❌ ปฏิเสธ</span>'; cls = 'reject';
+    }
+
+    var actions = '';
+    if (r.status === 'รออนุมัติ') {
+      actions = '<input class="admin-note-input" id="note_' + i + '" placeholder="หมายเหตุจากเจ้าหน้าที่ (ถ้ามี)">'
+        + '<div style="display:flex;gap:8px">'
+        + '<button class="btn btn-success btn-sm" id="approveBtn_' + i + '" onclick="handleApprove(' + i + ')">✅ อนุมัติ</button>'
+        + '<button class="btn btn-danger btn-sm"  id="rejectBtn_' + i + '"  onclick="handleReject(' + i + ')">❌ ปฏิเสธ</button>'
+        + '</div>';
+    } else if (r.adminNote) {
+      actions = '<div style="font-size:0.85rem;color:var(--muted)">หมายเหตุ: ' + escHtml(r.adminNote) + '</div>';
+    }
+
+    html += '<div class="req-card ' + cls + '">'
+      + '<div class="req-header"><span class="req-name">👶 ' + escHtml(r.childName || '-') + '</span>' + statusBadge + '</div>'
+      + '<div class="req-meta">'
+      + '<div><div class="label">เลขบัตร</div>' + escHtml(r.parentId) + '</div>'
+      + '<div><div class="label">วันนัดเดิม</div>' + escHtml(r.currentDate || '-') + '</div>'
+      + '<div><div class="label">ขอเลื่อนเป็น</div>📅 ' + escHtml(r.requestedDate || '-')
+        + (r.requestedTime ? ' ' + escHtml(r.requestedTime) : '') + '</div>'
+      + '<div><div class="label">วันที่ส่งคำขอ</div>' + escHtml(r.submittedAt || '-') + '</div>'
+      + (r.processedAt ? '<div><div class="label">ดำเนินการเมื่อ</div>' + escHtml(r.processedAt) + '</div>' : '')
+      + '</div>'
+      + '<div class="req-reason">📝 <strong>เหตุผล:</strong> ' + escHtml(r.reason || '-') + '</div>'
+      + '<div id="reqAlert_' + i + '"></div>'
+      + '<div class="req-actions">' + actions + '</div>'
+      + '</div>';
+  });
+  document.getElementById('requestArea').innerHTML = html;
+}
+
+async function handleApprove(idx) {
+  var r    = displayRequests[idx]; if (!r) return;
+  var note = (document.getElementById('note_' + idx) || {}).value || '';
+  setReqBtns(idx, true);
+  try {
+    const res = await callAPI('approveRescheduleRequest', { password: adminPassword, reqRowIndex: r.reqRowIndex, adminNote: note });
+    setReqBtns(idx, false);
+    var el = document.getElementById('reqAlert_' + idx);
+    if (el) el.innerHTML = '<div class="alert alert-' + (res.success ? 'success' : 'error') + '" style="margin-top:8px">'
+      + (res.success ? '✅' : '❌') + ' ' + escHtml(res.message) + '</div>';
+    if (res.success) setTimeout(function () { loadRequests(); }, 1200);
+  } catch (e) {
+    setReqBtns(idx, false);
+    var el = document.getElementById('reqAlert_' + idx);
+    if (el) el.innerHTML = '<div class="alert alert-error" style="margin-top:8px">⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ</div>';
+  }
+}
+
+async function handleReject(idx) {
+  var r    = displayRequests[idx]; if (!r) return;
+  var note = (document.getElementById('note_' + idx) || {}).value || '';
+  if (!note.trim() && !confirm('ยืนยันการปฏิเสธคำขอ? (ไม่ได้กรอกหมายเหตุ)')) return;
+  setReqBtns(idx, true);
+  try {
+    const res = await callAPI('rejectRescheduleRequest', { password: adminPassword, reqRowIndex: r.reqRowIndex, adminNote: note });
+    setReqBtns(idx, false);
+    var el = document.getElementById('reqAlert_' + idx);
+    if (el) el.innerHTML = '<div class="alert alert-' + (res.success ? 'success' : 'error') + '" style="margin-top:8px">'
+      + (res.success ? '✅' : '❌') + ' ' + escHtml(res.message) + '</div>';
+    if (res.success) setTimeout(function () { loadRequests(); }, 1200);
+  } catch (e) {
+    setReqBtns(idx, false);
+  }
+}
+
+function setReqBtns(idx, disabled) {
+  var a = document.getElementById('approveBtn_' + idx);
+  var b = document.getElementById('rejectBtn_' + idx);
+  if (a) { a.disabled = disabled; a.innerHTML = disabled ? '<span class="spinner"></span>' : '✅ อนุมัติ'; }
+  if (b) { b.disabled = disabled; }
+}
+
+// ════════════════════════════════════════
+// EVENTS
+// ════════════════════════════════════════
+document.getElementById('editModal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+document.getElementById('passwordInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
+</script>
+</body>
+</html>
