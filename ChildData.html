@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ระบบติดตามพัฒนาการเด็ก</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+/* ─── RESET & BASE ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue-dark:   #0D47A1;
+  --blue:        #1565C0;
+  --blue-mid:    #1976D2;
+  --blue-light:  #E3F2FD;
+  --blue-pale:   #F0F7FF;
+  --teal:        #00897B;
+  --pink:        #AD1457;
+  --pink-light:  #FCE4EC;
+  --green:       #2E7D32;
+  --green-light: #E8F5E9;
+  --red:         #C62828;
+  --red-light:   #FFEBEE;
+  --amber:       #F57F17;
+  --amber-light: #FFF8E1;
+  --text-main:   #1A2332;
+  --text-sub:    #546E7A;
+  --text-muted:  #90A4AE;
+  --border:      #E0E7EF;
+  --bg:          #F4F7FB;
+  --card:        #FFFFFF;
+  --shadow:      0 2px 12px rgba(13,71,161,.08);
+  --shadow-md:   0 4px 20px rgba(13,71,161,.12);
+  --radius:      14px;
+  --radius-sm:   8px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Sarabun', 'IBM Plex Sans Thai', sans-serif;
+  background: var(--bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* ─── HEADER ─── */
+.app-header {
+  background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+  color: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 62px;
+  box-shadow: 0 2px 10px rgba(13,71,161,.3);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-icon {
+  width: 38px; height: 38px;
+  background: rgba(255,255,255,.15);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.header-text h1 { font-size: 16px; font-weight: 700; letter-spacing: .3px; }
+.header-text p  { font-size: 11px; opacity: .75; margin-top: 1px; }
+.header-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* ─── LAYOUT ─── */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+/* ─── TABS ─── */
+.tab-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 6px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.tab-btn {
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.tab-btn:hover { background: var(--blue-pale); color: var(--blue); }
+.tab-btn.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(21,101,192,.35);
+}
+.tab-icon { font-size: 15px; }
+
+/* ─── CONTENT PANES ─── */
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ─── CARD ─── */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  border: 1px solid rgba(224,231,239,.6);
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue);
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--blue-light);
+}
+.card-title-icon {
+  width: 28px; height: 28px;
+  background: var(--blue-light);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+/* ─── FORM ─── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.form-grid.full { grid-template-columns: 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; font-weight: 600; color: var(--text-sub); letter-spacing: .3px; }
+.req { color: #E53935; }
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  font-size: 13.5px;
+  font-family: inherit;
+  width: 100%;
+  color: var(--text-main);
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(21,101,192,.1);
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23546E7A' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
+textarea { resize: vertical; min-height: 64px; }
+
+/* ─── HINT BOX ─── */
+.hint-box {
+  display: none;
+  background: var(--blue-pale);
+  border: 1px solid #BBDEFB;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--blue-dark);
+  margin-top: -6px;
+  margin-bottom: 8px;
+  line-height: 1.7;
+}
+.hint-box.show { display: block; }
+.hint-box strong { color: var(--blue-dark); }
+
+/* ─── PRIMARY BUTTON ─── */
+.btn-primary {
+  width: 100%;
+  padding: 13px;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: .3px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary:hover { background: var(--blue-dark); box-shadow: 0 4px 12px rgba(13,71,161,.3); }
+.btn-primary:disabled { background: #90CAF9; cursor: not-allowed; box-shadow: none; }
+
+/* ─── RESULT CARD ─── */
+.result-wrap { margin-top: 16px; animation: slideUp .3s ease; }
+@keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+.result-card { border-radius: var(--radius); padding: 20px; border: 2px solid; }
+.result-card.pass { background: var(--green-light); border-color: #66BB6A; }
+.result-card.fail { background: var(--red-light); border-color: #EF5350; }
+
+.result-badge { text-align: center; margin-bottom: 16px; }
+.result-badge .badge-icon { font-size: 36px; display: block; line-height: 1; margin-bottom: 6px; }
+.result-badge .badge-text { font-size: 20px; font-weight: 800; }
+.pass .badge-text { color: #1B5E20; }
+.fail .badge-text { color: #B71C1C; }
+
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.result-item {
+  background: rgba(255,255,255,.8);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+.ri-label  { font-size: 11px; color: var(--text-sub); margin-bottom: 3px; font-weight: 500; }
+.ri-value  { font-size: 22px; font-weight: 800; color: var(--text-main); line-height: 1; }
+.ri-unit   { font-size: 11px; color: var(--text-sub); }
+.ri-status {
+  display: inline-block; margin-top: 6px; padding: 3px 10px;
+  border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.ri-status.s-pass { background: var(--green-light); color: var(--green); }
+.ri-status.s-fail { background: var(--red-light); color: var(--red); }
+.ri-range  { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+.ri-desc   { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+.save-ok {
+  text-align: center; margin-top: 12px; font-size: 12px;
+  color: var(--green); font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+
+/* ─── ALERT ─── */
+.alert {
+  padding: 12px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; margin-top: 12px;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.alert-error { background: var(--red-light); color: var(--red); border: 1px solid #FFCDD2; }
+.alert-warn  { background: var(--amber-light); color: var(--amber); border: 1px solid #FFD54F; }
+
+/* ─── CHART TAB ─── */
+.chart-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.ctrl-group { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; }
+.ctrl-btn {
+  border: none; background: transparent; border-radius: 7px;
+  padding: 8px 16px; font-family: inherit; font-size: 12.5px;
+  font-weight: 500; color: var(--text-sub); cursor: pointer; transition: all .2s;
+}
+.ctrl-btn.on-boy  { background: var(--blue);  color: #fff; font-weight: 700; }
+.ctrl-btn.on-girl { background: var(--pink);  color: #fff; font-weight: 700; }
+.ctrl-btn.on-wt   { background: var(--teal);  color: #fff; font-weight: 700; }
+.ctrl-btn.on-ht   { background: #6A1B9A;       color: #fff; font-weight: 700; }
+
+.chart-canvas-wrap { position: relative; width: 100%; height: 400px; margin-bottom: 8px; }
+
+.legend-list { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0 14px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-sub); }
+.legend-swatch { width: 22px; height: 2.5px; border-radius: 2px; }
+
+/* ─── CHART INPUT ─── */
+.chart-input-panel {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.cip-title { font-size: 12px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px; }
+.cip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cip-row label { font-size: 12px; color: var(--text-sub); min-width: 80px; }
+.cip-row input { width: 90px; padding: 8px 10px; font-size: 12.5px; }
+.btn-chart {
+  padding: 8px 16px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  background: #fff; color: var(--text-main); transition: all .2s;
+}
+.btn-chart.check { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn-chart.check:hover { background: var(--blue-dark); }
+.btn-chart:hover:not(.check) { background: var(--bg); }
+.cip-result {
+  display: none; margin-top: 10px; padding: 10px 14px;
+  border-radius: var(--radius-sm); font-size: 13px; line-height: 1.6; font-weight: 500;
+}
+.cip-result.good { background: var(--green-light); color: #1B5E20; border: 1px solid #A5D6A7; }
+.cip-result.warn { background: var(--amber-light); color: #6D4C00; border: 1px solid #FFD54F; }
+.cip-result.bad  { background: var(--red-light);   color: var(--red); border: 1px solid #EF9A9A; }
+
+/* ─── SEARCH TAB ─── */
+.search-row { display: flex; gap: 10px; }
+.search-row input { flex: 1; }
+.search-row .btn-primary { width: auto; white-space: nowrap; padding: 10px 22px; }
+
+.history-card {
+  border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 15px; margin-bottom: 12px; background: #fff; transition: box-shadow .2s;
+}
+.history-card:hover { box-shadow: var(--shadow-md); }
+.history-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px;
+}
+.history-name { font-weight: 700; font-size: 14px; }
+.history-meta { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+.status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  white-space: nowrap; flex-shrink: 0;
+}
+.status-badge.pass { background: var(--green-light); color: var(--green); }
+.status-badge.fail { background: var(--red-light); color: var(--red); }
+.history-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.detail-item { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.detail-label { font-size: 10.5px; color: var(--text-muted); margin-bottom: 2px; }
+.detail-value { font-size: 13px; font-weight: 600; color: var(--text-main); }
+.detail-value.p { color: var(--green); }
+.detail-value.f { color: var(--red); }
+
+.empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+.empty-state p { font-size: 14px; }
+
+/* ─── LOADING SPINNER ─── */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff;
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 520px) {
+  .form-grid, .result-grid { grid-template-columns: 1fr; }
+  .history-details { grid-template-columns: repeat(2, 1fr); }
+  .app-header { height: 56px; padding: 0 16px; }
+  .container { padding: 14px 12px 32px; }
+  .chart-canvas-wrap { height: 300px; }
+  .cip-row { flex-direction: column; align-items: flex-start; }
+  .cip-row input { width: 100%; }
+  .header-badge { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-icon">👶</div>
+  <div class="header-text">
+    <h1>ระบบติดตามพัฒนาการเด็ก</h1>
+    <p>น้ำหนัก / ส่วนสูง ตามเกณฑ์ WHO · กระทรวงสาธารณสุข</p>
+  </div>
+  <span class="header-badge">WHO 2006</span>
+</header>
+
+<div class="container">
+
+  <!-- TAB NAV -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('record')">
+      <span class="tab-icon">📝</span> บันทึกข้อมูล
+    </button>
+    <button class="tab-btn" onclick="switchTab('chart')">
+      <span class="tab-icon">📈</span> กราฟพัฒนาการ
+    </button>
+    <button class="tab-btn" onclick="switchTab('search')">
+      <span class="tab-icon">🔍</span> ค้นหาประวัติ
+    </button>
+  </nav>
+
+  <!-- ═══ TAB: RECORD ═══ -->
+  <div id="pane-record" class="tab-pane active">
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon">🧒</div>ข้อมูลเด็ก</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>เลขบัตรประชาชน <span class="req">*</span></label>
+          <input type="text" id="idCard" maxlength="13" placeholder="กรอก 13 หลัก"
+                 oninput="this.value=this.value.replace(/\D/g,'')" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>ชื่อ-นามสกุล <span class="req">*</span></label>
+          <input type="text" id="childName" placeholder="ชื่อเต็มของเด็ก">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>เพศ <span class="req">*</span></label>
+          <select id="gender" onchange="onParamChange()">
+            <option value="">-- เลือกเพศ --</option>
+            <option value="male">ชาย</option>
+            <option value="female">หญิง</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>อายุ (เดือน) <span class="req">*</span></label>
+          <select id="age" onchange="onParamChange()">
+            <option value="">-- เลือกอายุ --</option>
+            <option value="0">แรกเกิด (0 เดือน)</option>
+            <option value="1">1 เดือน</option>
+            <option value="2">2 เดือน</option>
+            <option value="3">3 เดือน</option>
+            <option value="4">4 เดือน</option>
+            <option value="5">5 เดือน</option>
+            <option value="6">6 เดือน</option>
+            <option value="7">7 เดือน</option>
+            <option value="8">8 เดือน</option>
+            <option value="9">9 เดือน</option>
+            <option value="10">10 เดือน</option>
+            <option value="11">11 เดือน</option>
+            <option value="12">12 เดือน (1 ปี)</option>
+            <option value="15">15 เดือน</option>
+            <option value="18">18 เดือน (1.5 ปี)</option>
+            <option value="21">21 เดือน</option>
+            <option value="24">24 เดือน (2 ปี)</option>
+            <option value="30">30 เดือน (2.5 ปี)</option>
+            <option value="36">36 เดือน (3 ปี)</option>
+          </select>
+        </div>
+      </div>
+      <div id="hintBox" class="hint-box"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon">⚖️</div>ข้อมูลการวัด</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>น้ำหนัก (กิโลกรัม) <span class="req">*</span></label>
+          <input type="number" id="weight" placeholder="เช่น 6.5" step="0.1" min="1" max="30" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>ส่วนสูง (เซนติเมตร) <span class="req">*</span></label>
+          <input type="number" id="height" placeholder="เช่น 65.0" step="0.1" min="30" max="120" inputmode="decimal">
+        </div>
+      </div>
+      <div class="form-grid full">
+        <div class="field">
+          <label>หมายเหตุ / บันทึกเพิ่มเติม</label>
+          <textarea id="note" placeholder="เช่น อาการพิเศษ, วัคซีนที่ได้รับ..."></textarea>
+        </div>
+      </div>
+      <button class="btn-primary" id="submitBtn" onclick="submitData()">
+        <span id="btnIcon">💾</span>
+        <span id="btnText">บันทึกและตรวจสอบ</span>
+      </button>
+    </div>
+
+    <div id="resultSection"></div>
+  </div>
+
+  <!-- ═══ TAB: CHART ═══ -->
+  <div id="pane-chart" class="tab-pane">
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon">📊</div>กราฟการเจริญเติบโต WHO 0–36 เดือน</div>
+      <div class="chart-controls">
+        <div class="ctrl-group">
+          <button class="ctrl-btn on-boy" id="cb-boy" onclick="setChartGender('boy')">👦 เด็กชาย</button>
+          <button class="ctrl-btn" id="cb-girl" onclick="setChartGender('girl')">👧 เด็กหญิง</button>
+        </div>
+        <div class="ctrl-group">
+          <button class="ctrl-btn on-wt" id="cb-wt" onclick="setChartMode('weight')">⚖️ น้ำหนัก</button>
+          <button class="ctrl-btn" id="cb-ht" onclick="setChartMode('height')">📏 ส่วนสูง</button>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap"><canvas id="growthChart"></canvas></div>
+      <div class="legend-list" id="chartLegend"></div>
+      <div class="chart-input-panel">
+        <div class="cip-title">🔍 ตรวจสอบจุดพัฒนาการ</div>
+        <div class="cip-row">
+          <label>อายุ (เดือน)</label>
+          <input type="number" id="cipAge" min="0" max="36" step="1" placeholder="0 – 36" inputmode="numeric">
+          <label id="cipValLabel">น้ำหนัก (กก.)</label>
+          <input type="number" id="cipVal" step="0.1" placeholder="กรอกค่า" inputmode="decimal">
+          <button class="btn-chart check" onclick="checkPoint()">ตรวจสอบ</button>
+          <button class="btn-chart" onclick="clearPoint()">ล้าง</button>
+        </div>
+        <div class="cip-result" id="cipResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: SEARCH ═══ -->
+  <div id="pane-search" class="tab-pane">
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon">🔎</div>ค้นหาประวัติการตรวจ</div>
+      <div class="search-row">
+        <input type="text" id="searchId" maxlength="13"
+               placeholder="กรอกเลขบัตรประชาชน 13 หลัก"
+               oninput="this.value=this.value.replace(/\D/g,'')"
+               onkeydown="if(event.key==='Enter') searchHistory()"
+               inputmode="numeric">
+        <button class="btn-primary" onclick="searchHistory()">
+          <span>🔍</span> ค้นหา
+        </button>
+      </div>
+    </div>
+    <div id="searchResults"></div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// ⚙️ CONFIG — แก้ URL ตรงนี้หลัง Deploy Apps Script
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzc62MpfanOBrXd5ElIvjPt9_3v5s2N-2C9sp1fQAj0Uc9_YMnbkFwbMZapGtaXnGKK/exec';
+
+// ============================================================
+// API HELPER — แทนที่ google.script.run ด้วย fetch
+// ============================================================
+async function callAPI(action, params = {}) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, ...params })
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+// ============================================================
+// WHO DATA (ใช้ใน frontend สำหรับ hint box + chart)
+// ============================================================
+const WHO_WEIGHT = {
+  boy: {
+    P3:  [2.5,3.4,4.3,5.0,5.6,6.1,6.5,6.9,7.2,7.5,7.7,7.9,8.1,8.3,8.5,8.7,8.8,9.0,9.1,9.3,9.4,9.6,9.7,9.9,10.0,10.1,10.3,10.4,10.6,10.7,10.8,11.0,11.1,11.3,11.4,11.5,11.7],
+    P10: [2.8,3.7,4.7,5.5,6.2,6.7,7.2,7.6,7.9,8.2,8.5,8.7,9.0,9.2,9.4,9.6,9.8,10.0,10.1,10.3,10.5,10.6,10.8,11.0,11.1,11.3,11.4,11.6,11.7,11.9,12.0,12.2,12.3,12.5,12.6,12.8,12.9],
+    P25: [3.1,4.1,5.1,6.0,6.7,7.3,7.8,8.2,8.6,8.9,9.2,9.5,9.7,10.0,10.2,10.4,10.6,10.8,11.0,11.2,11.4,11.5,11.7,11.9,12.1,12.2,12.4,12.6,12.7,12.9,13.1,13.2,13.4,13.6,13.7,13.9,14.1],
+    P50: [3.3,4.5,5.6,6.4,7.2,7.8,8.3,8.8,9.2,9.6,9.9,10.2,10.5,10.8,11.0,11.3,11.5,11.8,12.0,12.2,12.4,12.7,12.9,13.1,13.3,13.5,13.8,14.0,14.2,14.4,14.7,14.9,15.1,15.4,15.6,15.8,16.1],
+    P75: [3.6,4.9,6.1,7.0,7.9,8.6,9.1,9.6,10.1,10.5,10.9,11.2,11.5,11.8,12.1,12.4,12.7,12.9,13.2,13.4,13.7,13.9,14.2,14.5,14.7,15.0,15.2,15.5,15.7,16.0,16.3,16.5,16.8,17.1,17.3,17.6,17.9],
+    P90: [3.9,5.3,6.6,7.6,8.5,9.3,9.9,10.5,11.0,11.4,11.9,12.3,12.7,13.0,13.4,13.7,14.0,14.3,14.7,15.0,15.3,15.6,15.9,16.2,16.5,16.8,17.1,17.4,17.7,18.0,18.3,18.6,18.9,19.2,19.5,19.8,20.1],
+    P97: [4.3,5.7,7.1,8.2,9.2,10.0,10.7,11.3,11.9,12.4,12.9,13.3,13.7,14.1,14.5,14.9,15.3,15.6,16.0,16.3,16.7,17.0,17.4,17.8,18.1,18.5,18.8,19.2,19.5,19.9,20.2,20.6,20.9,21.3,21.6,22.0,22.3]
+  },
+  girl: {
+    P3:  [2.4,3.2,4.0,4.7,5.3,5.8,6.3,6.7,7.0,7.3,7.5,7.8,8.0,8.2,8.4,8.5,8.7,8.9,9.0,9.2,9.3,9.5,9.6,9.8,9.9,10.1,10.2,10.4,10.5,10.7,10.8,11.0,11.1,11.3,11.4,11.6,11.7],
+    P10: [2.7,3.5,4.4,5.1,5.8,6.4,6.9,7.3,7.7,8.0,8.3,8.5,8.8,9.0,9.2,9.4,9.6,9.8,10.0,10.1,10.3,10.5,10.6,10.8,11.0,11.1,11.3,11.5,11.6,11.8,12.0,12.1,12.3,12.5,12.6,12.8,13.0],
+    P25: [3.0,3.8,4.8,5.6,6.3,6.9,7.5,7.9,8.3,8.7,9.0,9.3,9.5,9.8,10.0,10.2,10.4,10.6,10.8,11.0,11.2,11.4,11.5,11.7,11.9,12.1,12.3,12.5,12.7,12.8,13.0,13.2,13.4,13.6,13.8,14.0,14.2],
+    P50: [3.2,4.2,5.1,6.0,6.7,7.3,7.9,8.4,8.8,9.2,9.5,9.9,10.2,10.4,10.7,10.9,11.1,11.3,11.6,11.8,12.0,12.2,12.4,12.6,12.8,13.0,13.2,13.4,13.6,13.9,14.1,14.3,14.5,14.8,15.0,15.2,15.5],
+    P75: [3.5,4.6,5.6,6.5,7.3,8.0,8.6,9.1,9.6,10.0,10.4,10.7,11.1,11.4,11.7,11.9,12.2,12.4,12.7,12.9,13.2,13.4,13.7,13.9,14.2,14.4,14.7,14.9,15.2,15.5,15.7,16.0,16.3,16.6,16.9,17.1,17.4],
+    P90: [3.8,5.0,6.1,7.1,8.0,8.7,9.4,9.9,10.4,10.9,11.3,11.7,12.1,12.4,12.7,13.1,13.4,13.7,14.0,14.3,14.6,14.9,15.2,15.5,15.8,16.1,16.4,16.7,17.0,17.3,17.6,17.9,18.2,18.5,18.8,19.1,19.4],
+    P97: [4.2,5.4,6.6,7.7,8.7,9.5,10.2,10.8,11.4,11.9,12.4,12.8,13.3,13.6,14.0,14.3,14.7,15.0,15.4,15.7,16.0,16.4,16.7,17.0,17.4,17.7,18.1,18.4,18.8,19.1,19.5,19.8,20.2,20.5,20.9,21.2,21.6]
+  }
+};
+
+const WHO_HEIGHT = {
+  boy: {
+    P3:  [46.1,50.8,54.4,57.3,59.7,61.7,63.3,64.8,66.2,67.5,68.7,69.9,71.0,72.1,73.1,74.1,75.0,76.0,76.9,77.7,78.6,79.4,80.2,81.0,81.7,82.5,83.2,83.9,84.6,85.3,86.0,86.7,87.3,87.9,88.6,89.2,89.8],
+    P10: [47.5,52.2,55.9,58.9,61.4,63.5,65.2,66.8,68.2,69.6,70.9,72.1,73.2,74.4,75.4,76.4,77.4,78.3,79.2,80.1,81.0,81.9,82.7,83.5,84.3,85.1,85.8,86.6,87.3,88.1,88.8,89.5,90.2,90.9,91.6,92.2,92.9],
+    P25: [48.8,53.5,57.3,60.3,62.9,65.0,66.8,68.4,69.9,71.3,72.6,73.9,75.0,76.1,77.2,78.2,79.2,80.2,81.1,82.0,82.9,83.8,84.7,85.5,86.3,87.1,87.9,88.7,89.5,90.2,91.0,91.7,92.4,93.1,93.8,94.5,95.2],
+    P50: [49.9,54.7,58.4,61.4,63.9,65.9,67.6,69.2,70.6,72.0,73.3,74.5,75.7,76.9,77.9,79.0,80.0,81.0,82.0,82.9,83.8,84.8,85.7,86.6,87.5,88.3,89.2,90.0,90.9,91.7,92.5,93.3,94.1,94.9,95.7,96.5,97.3],
+    P75: [51.7,56.2,60.0,63.1,65.7,67.8,69.6,71.3,72.8,74.2,75.6,76.9,78.1,79.2,80.3,81.4,82.5,83.5,84.5,85.5,86.5,87.5,88.4,89.4,90.3,91.2,92.1,93.0,93.9,94.8,95.7,96.6,97.4,98.3,99.1,100.0,100.8],
+    P90: [53.4,58.1,62.0,65.2,67.9,70.1,72.0,73.7,75.3,76.8,78.2,79.5,80.7,81.9,83.1,84.2,85.3,86.4,87.4,88.4,89.4,90.5,91.4,92.4,93.4,94.3,95.3,96.2,97.1,98.1,99.0,99.9,100.8,101.7,102.6,103.5,104.3],
+    P97: [55.1,59.9,63.9,67.1,69.9,72.2,74.0,75.9,77.5,79.1,80.5,81.8,83.1,84.4,85.6,86.7,87.8,88.9,90.0,91.1,92.1,93.2,94.2,95.3,96.3,97.3,98.3,99.3,100.3,101.3,102.2,103.2,104.1,105.0,106.0,106.9,107.8]
+  },
+  girl: {
+    P3:  [44.8,49.8,52.9,55.8,58.2,60.1,61.8,63.4,64.9,66.3,67.6,68.9,70.0,71.2,72.3,73.3,74.3,75.2,76.2,77.1,77.9,78.8,79.6,80.4,81.2,82.0,82.7,83.5,84.2,85.0,85.7,86.4,87.1,87.8,88.5,89.1,89.8],
+    P10: [46.1,51.1,54.4,57.3,59.7,61.7,63.5,65.1,66.7,68.1,69.5,70.8,72.0,73.2,74.3,75.3,76.4,77.4,78.4,79.3,80.2,81.1,82.0,82.9,83.7,84.6,85.4,86.2,87.0,87.8,88.5,89.3,90.0,90.7,91.4,92.1,92.7],
+    P25: [47.3,52.4,55.7,58.7,61.2,63.2,65.1,66.8,68.3,69.8,71.2,72.5,73.7,74.9,76.1,77.1,78.2,79.2,80.2,81.2,82.1,83.1,84.0,84.9,85.8,86.6,87.5,88.3,89.1,89.9,90.7,91.5,92.3,93.0,93.8,94.5,95.3],
+    P50: [49.1,53.7,57.1,60.1,62.7,64.8,66.7,68.4,70.0,71.5,72.8,74.1,75.3,76.6,77.8,78.9,80.0,81.1,82.1,83.1,84.1,85.1,86.0,86.9,87.8,88.7,89.6,90.5,91.3,92.1,92.9,93.7,94.5,95.3,96.0,96.8,97.5],
+    P75: [50.9,55.7,59.2,62.2,64.8,67.0,68.9,70.7,72.3,73.8,75.2,76.5,77.8,79.0,80.2,81.3,82.4,83.5,84.5,85.5,86.5,87.5,88.5,89.4,90.3,91.2,92.1,93.0,93.9,94.7,95.6,96.4,97.2,98.0,98.8,99.6,100.4],
+    P90: [52.5,57.4,61.1,64.2,66.9,69.2,71.2,73.0,74.7,76.2,77.7,79.1,80.4,81.7,82.9,84.1,85.2,86.3,87.4,88.4,89.4,90.4,91.4,92.4,93.3,94.3,95.2,96.1,97.0,97.8,98.7,99.5,100.4,101.2,102.0,102.8,103.6],
+    P97: [54.0,59.1,62.9,66.1,68.9,71.3,73.3,75.2,76.9,78.5,80.0,81.4,82.7,84.0,85.3,86.5,87.7,88.8,89.9,91.0,92.0,93.1,94.1,95.1,96.0,97.0,98.0,98.9,99.8,100.8,101.7,102.6,103.5,104.4,105.2,106.1,107.0]
+  }
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function getWHORange(ageMonths, gender) {
+  const wData = WHO_WEIGHT[gender === 'male' ? 'boy' : 'girl'];
+  const hData = WHO_HEIGHT[gender === 'male' ? 'boy' : 'girl'];
+  const idx   = Math.min(Math.max(Math.round(ageMonths), 0), 36);
+  return {
+    weight: [+wData.P10[idx].toFixed(1), +wData.P90[idx].toFixed(1)],
+    height: [+hData.P10[idx].toFixed(1), +hData.P90[idx].toFixed(1)]
+  };
+}
+
+function ageLabel(m) {
+  if (m === 0) return 'แรกเกิด';
+  if (m < 12) return m + ' เดือน';
+  const y = Math.floor(m / 12), r = m % 12;
+  return r === 0 ? y + ' ปี' : y + ' ปี ' + r + ' เดือน';
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+  document.querySelectorAll('.tab-btn')[['record','chart','search'].indexOf(name)].classList.add('active');
+  if (name === 'chart' && !chartInstance) initChart();
+}
+
+// ============================================================
+// RECORD TAB
+// ============================================================
+function onParamChange() {
+  const age    = document.getElementById('age').value;
+  const gender = document.getElementById('gender').value;
+  const box    = document.getElementById('hintBox');
+  if (!age || !gender) { box.classList.remove('show'); return; }
+
+  const r = getWHORange(parseInt(age), gender);
+  const gLabel = gender === 'male' ? 'เด็กชาย' : 'เด็กหญิง';
+  box.innerHTML = `เกณฑ์ปกติ (P10–P90) <strong>${gLabel}</strong> อายุ <strong>${ageLabel(parseInt(age))}</strong>:
+    <br>⚖️ น้ำหนัก <strong>${r.weight[0]} – ${r.weight[1]} กก.</strong>
+    &nbsp;|&nbsp;
+    📏 ส่วนสูง <strong>${r.height[0]} – ${r.height[1]} ซม.</strong>`;
+  box.classList.add('show');
+}
+
+function validateRecord() {
+  const id  = document.getElementById('idCard').value.trim();
+  const name = document.getElementById('childName').value.trim();
+  const gen  = document.getElementById('gender').value;
+  const age  = document.getElementById('age').value;
+  const wt   = document.getElementById('weight').value;
+  const ht   = document.getElementById('height').value;
+  if (id.length !== 13)  { alert('กรุณากรอกเลขบัตรประชาชน 13 หลัก'); return false; }
+  if (!name)             { alert('กรุณากรอกชื่อ-นามสกุล'); return false; }
+  if (!gen)              { alert('กรุณาเลือกเพศ'); return false; }
+  if (age === '')        { alert('กรุณาเลือกอายุ'); return false; }
+  if (!wt || wt <= 0)   { alert('กรุณากรอกน้ำหนักที่ถูกต้อง'); return false; }
+  if (!ht || ht <= 0)   { alert('กรุณากรอกส่วนสูงที่ถูกต้อง'); return false; }
+  return true;
+}
+
+async function submitData() {
+  if (!validateRecord()) return;
+
+  const btn  = document.getElementById('submitBtn');
+  const icon = document.getElementById('btnIcon');
+  const text = document.getElementById('btnText');
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner"></span>';
+  text.textContent = 'กำลังบันทึก...';
+
+  const payload = {
+    idCard:  document.getElementById('idCard').value.trim(),
+    name:    document.getElementById('childName').value.trim(),
+    gender:  document.getElementById('gender').value,
+    age:     parseInt(document.getElementById('age').value),
+    weight:  parseFloat(document.getElementById('weight').value),
+    height:  parseFloat(document.getElementById('height').value),
+    note:    document.getElementById('note').value.trim()
+  };
+
+  try {
+    const res = await callAPI('saveChildData', { data: payload });
+    icon.textContent = '💾';
+    text.textContent = 'บันทึกและตรวจสอบ';
+    btn.disabled = false;
+    onSaveSuccess(res);
+  } catch (e) {
+    icon.textContent = '💾';
+    text.textContent = 'บันทึกและตรวจสอบ';
+    btn.disabled = false;
+    document.getElementById('resultSection').innerHTML =
+      `<div class="alert alert-error">❌ เกิดข้อผิดพลาด: ${e.message}</div>`;
+  }
+}
+
+function onSaveSuccess(res) {
+  if (!res.success) {
+    document.getElementById('resultSection').innerHTML =
+      `<div class="alert alert-error">⚠️ ${res.message}</div>`;
+    return;
+  }
+  const r  = res.result;
+  const wt = parseFloat(document.getElementById('weight').value);
+  const ht = parseFloat(document.getElementById('height').value);
+
+  document.getElementById('resultSection').innerHTML = `
+    <div class="result-wrap">
+      <div class="result-card ${r.overallPass ? 'pass' : 'fail'}">
+        <div class="result-badge">
+          <span class="badge-icon">${r.overallPass ? '✅' : '⚠️'}</span>
+          <div class="badge-text">${r.overallPass ? 'ผ่านเกณฑ์พัฒนาการ' : 'ไม่ผ่านเกณฑ์พัฒนาการ'}</div>
+        </div>
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="ri-label">น้ำหนัก</div>
+            <div class="ri-value">${wt}</div>
+            <div class="ri-unit">กิโลกรัม</div>
+            <div><span class="ri-status ${r.weightPass ? 's-pass' : 's-fail'}">${r.weightPass ? '✓ ผ่าน' : '✗ ไม่ผ่าน'}</span></div>
+            <div class="ri-range">เกณฑ์ ${r.weightRange[0]}–${r.weightRange[1]} กก.</div>
+            <div class="ri-desc">${r.weightStatus}</div>
+          </div>
+          <div class="result-item">
+            <div class="ri-label">ส่วนสูง</div>
+            <div class="ri-value">${ht}</div>
+            <div class="ri-unit">เซนติเมตร</div>
+            <div><span class="ri-status ${r.heightPass ? 's-pass' : 's-fail'}">${r.heightPass ? '✓ ผ่าน' : '✗ ไม่ผ่าน'}</span></div>
+            <div class="ri-range">เกณฑ์ ${r.heightRange[0]}–${r.heightRange[1]} ซม.</div>
+            <div class="ri-desc">${r.heightStatus}</div>
+          </div>
+        </div>
+        <div class="save-ok">✅ บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว</div>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// CHART TAB
+// ============================================================
+let chartInstance = null;
+let chartGender   = 'boy';
+let chartMode     = 'weight';
+let plotPointDS   = null;
+
+const P_KEYS   = ['P3','P10','P25','P50','P75','P90','P97'];
+const P_COLORS = ['#e53935','#ef6c00','#f9a825','#2e7d32','#f9a825','#ef6c00','#e53935'];
+const P_DASHES = [[6,3],[4,2],[3,2],[],[3,2],[4,2],[6,3]];
+const P_WIDTHS = [1.5,1.5,1.5,2.5,1.5,1.5,1.5];
+const AGES_36  = Array.from({ length: 37 }, (_, i) => i);
+
+function initChart() { buildChart(); }
+
+function buildChart() {
+  const ctx  = document.getElementById('growthChart').getContext('2d');
+  const data = chartMode === 'weight' ? WHO_WEIGHT[chartGender] : WHO_HEIGHT[chartGender];
+  const isW  = chartMode === 'weight';
+  const accentColor = chartGender === 'boy' ? '#1565C0' : '#AD1457';
+
+  if (chartInstance) chartInstance.destroy();
+
+  const datasets = P_KEYS.map((key, i) => ({
+    label: key,
+    data: data[key],
+    borderColor: i === 3 ? accentColor : P_COLORS[i],
+    borderWidth: P_WIDTHS[i],
+    borderDash: P_DASHES[i],
+    pointRadius: 0, pointHoverRadius: 0,
+    fill: false, tension: 0.35
+  }));
+
+  plotPointDS = {
+    label: 'จุดที่ตรวจสอบ', data: [], type: 'scatter',
+    borderColor: '#6A1B9A', backgroundColor: '#9C27B0',
+    pointRadius: 8, pointHoverRadius: 10, pointStyle: 'circle', showLine: false
+  };
+  datasets.push(plotPointDS);
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels: AGES_36, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: item => item.datasetIndex < P_KEYS.length,
+          callbacks: {
+            title: items => 'อายุ ' + items[0].label + ' เดือน',
+            label: item  => item.dataset.label + ': ' + Number(item.raw).toFixed(1) + (isW ? ' kg' : ' cm')
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'อายุ (เดือน)', color: '#78909C', font: { size: 11 } },
+          ticks: { stepSize: 3, color: '#90A4AE', font: { size: 10 } },
+          grid:  { color: 'rgba(144,164,174,.15)' }
+        },
+        y: {
+          min: isW ? 2 : 44, max: isW ? 24 : 112,
+          title: { display: true, text: isW ? 'น้ำหนัก (kg)' : 'ความยาว/ส่วนสูง (cm)', color: '#78909C', font: { size: 11 } },
+          ticks: { color: '#90A4AE', font: { size: 10 } },
+          grid:  { color: 'rgba(144,164,174,.15)' }
+        }
+      }
+    }
+  });
+
+  buildLegend(accentColor);
+  document.getElementById('cipValLabel').textContent = isW ? 'น้ำหนัก (กก.)' : 'ส่วนสูง (ซม.)';
+  document.getElementById('cipVal').placeholder      = isW ? 'เช่น 8.5' : 'เช่น 70.0';
+}
+
+function buildLegend(accent) {
+  document.getElementById('chartLegend').innerHTML =
+    P_KEYS.map((k, i) => {
+      const col = i === 3 ? accent : P_COLORS[i];
+      const lbl = i === 3 ? k + ' (ค่ากลาง)' : k;
+      return `<span class="legend-item"><span class="legend-swatch" style="background:${col}"></span>${lbl}</span>`;
+    }).join('') +
+    `<span class="legend-item"><span class="legend-swatch" style="background:#9C27B0;height:10px;width:10px;border-radius:50%;"></span>จุดที่ตรวจสอบ</span>`;
+}
+
+function setChartGender(g) {
+  chartGender = g;
+  document.getElementById('cb-boy').className  = 'ctrl-btn' + (g === 'boy'  ? ' on-boy'  : '');
+  document.getElementById('cb-girl').className = 'ctrl-btn' + (g === 'girl' ? ' on-girl' : '');
+  clearPoint(); buildChart();
+}
+
+function setChartMode(m) {
+  chartMode = m;
+  document.getElementById('cb-wt').className = 'ctrl-btn' + (m === 'weight' ? ' on-wt' : '');
+  document.getElementById('cb-ht').className = 'ctrl-btn' + (m === 'height' ? ' on-ht' : '');
+  clearPoint(); buildChart();
+}
+
+function checkPoint() {
+  const ageVal  = parseFloat(document.getElementById('cipAge').value);
+  const measVal = parseFloat(document.getElementById('cipVal').value);
+  if (isNaN(ageVal) || ageVal < 0 || ageVal > 36) { showCipResult('⚠️ กรุณากรอกอายุระหว่าง 0–36 เดือน', 'warn'); return; }
+  if (isNaN(measVal) || measVal <= 0) { showCipResult('⚠️ กรุณากรอกค่าที่ต้องการตรวจสอบ', 'warn'); return; }
+
+  const data = chartMode === 'weight' ? WHO_WEIGHT[chartGender] : WHO_HEIGHT[chartGender];
+  const idx  = Math.round(ageVal);
+  const [p3,p10,p25,p50,p75,p90,p97] = P_KEYS.map(k => data[k][idx]);
+  const unit = chartMode === 'weight' ? 'กก.' : 'ซม.';
+  const gt   = chartGender === 'boy' ? 'เด็กชาย' : 'เด็กหญิง';
+
+  if (plotPointDS) { plotPointDS.data = [{ x: ageVal, y: measVal }]; chartInstance && chartInstance.update(); }
+
+  let msg, cls;
+  if      (measVal < p3)   { msg = 'ต่ำกว่า P3 — น้ำหนัก/ส่วนสูงน้อยมาก ควรพบแพทย์';     cls = 'bad'; }
+  else if (measVal < p10)  { msg = 'อยู่ระหว่าง P3–P10 — ค่อนข้างน้อย ควรติดตามใกล้ชิด'; cls = 'warn'; }
+  else if (measVal < p25)  { msg = 'อยู่ระหว่าง P10–P25 — ปกติ (ค่อนข้างน้อย)';            cls = 'good'; }
+  else if (measVal <= p75) { msg = 'อยู่ระหว่าง P25–P75 — ปกติดี อยู่ในช่วงกลาง ✅';       cls = 'good'; }
+  else if (measVal <= p90) { msg = 'อยู่ระหว่าง P75–P90 — ปกติ (ค่อนข้างมาก)';             cls = 'good'; }
+  else if (measVal <= p97) { msg = 'อยู่ระหว่าง P90–P97 — ค่อนข้างมาก ควรติดตาม';          cls = 'warn'; }
+  else                     { msg = 'สูงกว่า P97 — เกินเกณฑ์ ควรพบแพทย์';                     cls = 'bad'; }
+
+  showCipResult(`${gt} | อายุ ${ageVal} เดือน | ${measVal} ${unit} | ${msg}`, cls);
+}
+
+function clearPoint() {
+  if (plotPointDS) { plotPointDS.data = []; chartInstance && chartInstance.update(); }
+  document.getElementById('cipAge').value = '';
+  document.getElementById('cipVal').value = '';
+  document.getElementById('cipResult').style.display = 'none';
+}
+
+function showCipResult(msg, type) {
+  const el = document.getElementById('cipResult');
+  el.textContent = msg;
+  el.className   = 'cip-result ' + type;
+  el.style.display = 'block';
+}
+
+// ============================================================
+// SEARCH TAB
+// ============================================================
+async function searchHistory() {
+  const id = document.getElementById('searchId').value.trim();
+  if (id.length !== 13) { alert('กรุณากรอกเลขบัตรประชาชน 13 หลัก'); return; }
+
+  document.getElementById('searchResults').innerHTML =
+    `<div class="card"><div class="empty-state"><span class="empty-icon">⏳</span><p>กำลังค้นหาข้อมูล...</p></div></div>`;
+
+  try {
+    const res = await callAPI('searchByIdCard', { idCard: id });
+    renderSearchResults(res);
+  } catch (e) {
+    document.getElementById('searchResults').innerHTML =
+      `<div class="alert alert-error">❌ ${e.message}</div>`;
+  }
+}
+
+function renderSearchResults(res) {
+  const el = document.getElementById('searchResults');
+  if (!res.success || !res.data || res.data.length === 0) {
+    el.innerHTML = `<div class="card"><div class="empty-state">
+      <span class="empty-icon">🔍</span>
+      <p>ไม่พบข้อมูลสำหรับเลขบัตรประชาชนนี้</p>
+    </div></div>`;
+    return;
+  }
+
+  const cards = res.data.map(row => {
+    const isPass = row['ผลรวม'] === 'ผ่าน';
+    const note   = row['หมายเหตุ']
+      ? `<div class="detail-item" style="grid-column:span 3"><div class="detail-label">หมายเหตุ</div><div class="detail-value">${row['หมายเหตุ']}</div></div>`
+      : '';
+    return `
+      <div class="history-card">
+        <div class="history-header">
+          <div>
+            <div class="history-name">${row['ชื่อ-นามสกุล']}</div>
+            <div class="history-meta">${row['เพศ']} · อายุ ${row['อายุ (เดือน)']} เดือน · ${row['วันที่บันทึก']}</div>
+          </div>
+          <span class="status-badge ${isPass ? 'pass' : 'fail'}">${isPass ? '✓ ผ่าน' : '✗ ไม่ผ่าน'}</span>
+        </div>
+        <div class="history-details">
+          <div class="detail-item">
+            <div class="detail-label">น้ำหนัก</div>
+            <div class="detail-value">${row['น้ำหนัก (kg)']} กก.</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">ส่วนสูง</div>
+            <div class="detail-value">${row['ส่วนสูง (cm)']} ซม.</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">ผลน้ำหนัก</div>
+            <div class="detail-value ${row['ผลน้ำหนัก']==='ผ่าน'?'p':'f'}">${row['ผลน้ำหนัก']}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">ผลส่วนสูง</div>
+            <div class="detail-value ${row['ผลส่วนสูง']==='ผ่าน'?'p':'f'}">${row['ผลส่วนสูง']}</div>
+          </div>
+          ${note}
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon">📋</div>
+        ประวัติการตรวจทั้งหมด (${res.data.length} ครั้ง)
+      </div>
+      <div class="history-list">${cards}</div>
+    </div>`;
+}
+</script>
+</body>
+</html>
