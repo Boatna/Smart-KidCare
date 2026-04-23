@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ระบบติดตามพัฒนาการเด็ก</title>
+<title>ระบบติดตามการเจริญเติบโต</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -25,6 +25,7 @@
   --red-light:   #FFEBEE;
   --amber:       #F57F17;
   --amber-light: #FFF8E1;
+  --purple:      #6A1B9A;
   --text-main:   #1A2332;
   --text-sub:    #546E7A;
   --text-muted:  #90A4AE;
@@ -224,7 +225,7 @@ textarea { resize: vertical; min-height: 64px; }
   letter-spacing: .3px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-primary:hover { background: var(--blue-dark); box-shadow: 0 4px 12px rgba(13,71,161,.3); }
+.btn-primary:hover:not(:disabled) { background: var(--blue-dark); box-shadow: 0 4px 12px rgba(13,71,161,.3); }
 .btn-primary:disabled { background: #90CAF9; cursor: not-allowed; box-shadow: none; }
 
 /* ─── RESULT CARD ─── */
@@ -284,10 +285,10 @@ textarea { resize: vertical; min-height: 64px; }
   padding: 8px 16px; font-family: inherit; font-size: 12.5px;
   font-weight: 500; color: var(--text-sub); cursor: pointer; transition: all .2s;
 }
-.ctrl-btn.on-boy  { background: var(--blue);  color: #fff; font-weight: 700; }
-.ctrl-btn.on-girl { background: var(--pink);  color: #fff; font-weight: 700; }
-.ctrl-btn.on-wt   { background: var(--teal);  color: #fff; font-weight: 700; }
-.ctrl-btn.on-ht   { background: #6A1B9A;       color: #fff; font-weight: 700; }
+.ctrl-btn.on-boy  { background: var(--blue);   color: #fff; font-weight: 700; }
+.ctrl-btn.on-girl { background: var(--pink);   color: #fff; font-weight: 700; }
+.ctrl-btn.on-wt   { background: var(--teal);   color: #fff; font-weight: 700; }
+.ctrl-btn.on-ht   { background: var(--purple); color: #fff; font-weight: 700; }
 
 .chart-canvas-wrap { position: relative; width: 100%; height: 400px; margin-bottom: 8px; }
 
@@ -377,7 +378,6 @@ textarea { resize: vertical; min-height: 64px; }
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="app-header">
   <div class="header-icon">👶</div>
   <div class="header-text">
@@ -389,8 +389,7 @@ textarea { resize: vertical; min-height: 64px; }
 
 <div class="container">
 
-  <!-- TAB NAV -->
-  <nav class="tab-nav">
+  <nav class="tab-nav" id="tabNav">
     <button class="tab-btn active" onclick="switchTab('record')">
       <span class="tab-icon">📝</span> บันทึกข้อมูล
     </button>
@@ -402,7 +401,6 @@ textarea { resize: vertical; min-height: 64px; }
     </button>
   </nav>
 
-  <!-- ═══ TAB: RECORD ═══ -->
   <div id="pane-record" class="tab-pane active">
     <div class="card">
       <div class="card-title"><div class="card-title-icon">🧒</div>ข้อมูลเด็ก</div>
@@ -482,7 +480,6 @@ textarea { resize: vertical; min-height: 64px; }
     <div id="resultSection"></div>
   </div>
 
-  <!-- ═══ TAB: CHART ═══ -->
   <div id="pane-chart" class="tab-pane">
     <div class="card">
       <div class="card-title"><div class="card-title-icon">📊</div>กราฟการเจริญเติบโต WHO 0–36 เดือน</div>
@@ -513,7 +510,6 @@ textarea { resize: vertical; min-height: 64px; }
     </div>
   </div>
 
-  <!-- ═══ TAB: SEARCH ═══ -->
   <div id="pane-search" class="tab-pane">
     <div class="card">
       <div class="card-title"><div class="card-title-icon">🔎</div>ค้นหาประวัติการตรวจ</div>
@@ -523,8 +519,8 @@ textarea { resize: vertical; min-height: 64px; }
                oninput="this.value=this.value.replace(/\D/g,'')"
                onkeydown="if(event.key==='Enter') searchHistory()"
                inputmode="numeric">
-        <button class="btn-primary" onclick="searchHistory()">
-          <span>🔍</span> ค้นหา
+        <button class="btn-primary" id="searchBtn" onclick="searchHistory()">
+          <span id="searchIcon">🔍</span> <span id="searchText">ค้นหา</span>
         </button>
       </div>
     </div>
@@ -535,22 +531,34 @@ textarea { resize: vertical; min-height: 64px; }
 
 <script>
 // ============================================================
-// ⚙️ CONFIG — แก้ URL ตรงนี้หลัง Deploy Apps Script
+// ⚙️ CONFIG — เอา URL ที่ได้จากการ Deploy ใหม่ มาใส่ตรงนี้ครับ
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzc62MpfanOBrXd5ElIvjPt9_3v5s2N-2C9sp1fQAj0Uc9_YMnbkFwbMZapGtaXnGKK/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMvx9CwWBFS3sqwZl14fa3YAuW7rqH5btPvJLPe65LjYcKt6m8F5NM2LtBJM65Lxon/exec';
 
 // ============================================================
-// API HELPER — แทนที่ google.script.run ด้วย fetch
+// API HELPER
 // ============================================================
 async function callAPI(action, params = {}) {
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...params })
-  });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+  const body = JSON.stringify({ action, ...params });
+  let res;
+  try {
+    res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body
+    });
+  } catch (networkErr) {
+    throw new Error('ไม่สามารถเชื่อมต่อระบบได้: ' + networkErr.message);
+  }
+  
+  if (!res.ok) throw new Error('เซิร์ฟเวอร์ตอบกลับรหัส ' + res.status);
+  
+  try {
+    return await res.json();
+  } catch (parseErr) {
+    throw new Error('รูปแบบข้อมูลจากระบบไม่ถูกต้อง (อาจมี Error ฝั่ง Apps Script)');
+  }
 }
 
 // ============================================================
@@ -604,7 +612,7 @@ const WHO_HEIGHT = {
 function getWHORange(ageMonths, gender) {
   const wData = WHO_WEIGHT[gender === 'male' ? 'boy' : 'girl'];
   const hData = WHO_HEIGHT[gender === 'male' ? 'boy' : 'girl'];
-  const idx   = Math.min(Math.max(Math.round(ageMonths), 0), 36);
+  const idx = Math.min(Math.max(Math.round(ageMonths), 0), 36);
   return {
     weight: [+wData.P10[idx].toFixed(1), +wData.P90[idx].toFixed(1)],
     height: [+hData.P10[idx].toFixed(1), +hData.P90[idx].toFixed(1)]
@@ -621,11 +629,15 @@ function ageLabel(m) {
 // ============================================================
 // TAB SWITCHING
 // ============================================================
+const TAB_NAMES = ['record', 'chart', 'search'];
+
 function switchTab(name) {
+  if (!TAB_NAMES.includes(name)) return;
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tabNav .tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('pane-' + name).classList.add('active');
-  document.querySelectorAll('.tab-btn')[['record','chart','search'].indexOf(name)].classList.add('active');
+  const idx = TAB_NAMES.indexOf(name);
+  document.querySelectorAll('#tabNav .tab-btn')[idx].classList.add('active');
   if (name === 'chart' && !chartInstance) initChart();
 }
 
@@ -638,9 +650,9 @@ function onParamChange() {
   const box    = document.getElementById('hintBox');
   if (!age || !gender) { box.classList.remove('show'); return; }
 
-  const r = getWHORange(parseInt(age), gender);
+  const r = getWHORange(parseInt(age, 10), gender);
   const gLabel = gender === 'male' ? 'เด็กชาย' : 'เด็กหญิง';
-  box.innerHTML = `เกณฑ์ปกติ (P10–P90) <strong>${gLabel}</strong> อายุ <strong>${ageLabel(parseInt(age))}</strong>:
+  box.innerHTML = `เกณฑ์ปกติ (P10–P90) <strong>${gLabel}</strong> อายุ <strong>${ageLabel(parseInt(age, 10))}</strong>:
     <br>⚖️ น้ำหนัก <strong>${r.weight[0]} – ${r.weight[1]} กก.</strong>
     &nbsp;|&nbsp;
     📏 ส่วนสูง <strong>${r.height[0]} – ${r.height[1]} ซม.</strong>`;
@@ -648,7 +660,7 @@ function onParamChange() {
 }
 
 function validateRecord() {
-  const id  = document.getElementById('idCard').value.trim();
+  const id   = document.getElementById('idCard').value.trim();
   const name = document.getElementById('childName').value.trim();
   const gen  = document.getElementById('gender').value;
   const age  = document.getElementById('age').value;
@@ -658,8 +670,8 @@ function validateRecord() {
   if (!name)             { alert('กรุณากรอกชื่อ-นามสกุล'); return false; }
   if (!gen)              { alert('กรุณาเลือกเพศ'); return false; }
   if (age === '')        { alert('กรุณาเลือกอายุ'); return false; }
-  if (!wt || wt <= 0)   { alert('กรุณากรอกน้ำหนักที่ถูกต้อง'); return false; }
-  if (!ht || ht <= 0)   { alert('กรุณากรอกส่วนสูงที่ถูกต้อง'); return false; }
+  if (!wt || +wt <= 0)  { alert('กรุณากรอกน้ำหนักที่ถูกต้อง'); return false; }
+  if (!ht || +ht <= 0)  { alert('กรุณากรอกส่วนสูงที่ถูกต้อง'); return false; }
   return true;
 }
 
@@ -677,7 +689,7 @@ async function submitData() {
     idCard:  document.getElementById('idCard').value.trim(),
     name:    document.getElementById('childName').value.trim(),
     gender:  document.getElementById('gender').value,
-    age:     parseInt(document.getElementById('age').value),
+    age:     parseInt(document.getElementById('age').value, 10),
     weight:  parseFloat(document.getElementById('weight').value),
     height:  parseFloat(document.getElementById('height').value),
     note:    document.getElementById('note').value.trim()
@@ -688,7 +700,7 @@ async function submitData() {
     icon.textContent = '💾';
     text.textContent = 'บันทึกและตรวจสอบ';
     btn.disabled = false;
-    onSaveSuccess(res);
+    onSaveSuccess(res, payload.weight, payload.height);
   } catch (e) {
     icon.textContent = '💾';
     text.textContent = 'บันทึกและตรวจสอบ';
@@ -698,15 +710,13 @@ async function submitData() {
   }
 }
 
-function onSaveSuccess(res) {
+function onSaveSuccess(res, wt, ht) {
   if (!res.success) {
     document.getElementById('resultSection').innerHTML =
       `<div class="alert alert-error">⚠️ ${res.message}</div>`;
     return;
   }
-  const r  = res.result;
-  const wt = parseFloat(document.getElementById('weight').value);
-  const ht = parseFloat(document.getElementById('height').value);
+  const r = res.result;
 
   document.getElementById('resultSection').innerHTML = `
     <div class="result-wrap">
@@ -744,7 +754,7 @@ function onSaveSuccess(res) {
 let chartInstance = null;
 let chartGender   = 'boy';
 let chartMode     = 'weight';
-let plotPointDS   = null;
+const PLOT_DS_INDEX = 7;
 
 const P_KEYS   = ['P3','P10','P25','P50','P75','P90','P97'];
 const P_COLORS = ['#e53935','#ef6c00','#f9a825','#2e7d32','#f9a825','#ef6c00','#e53935'];
@@ -760,7 +770,10 @@ function buildChart() {
   const isW  = chartMode === 'weight';
   const accentColor = chartGender === 'boy' ? '#1565C0' : '#AD1457';
 
-  if (chartInstance) chartInstance.destroy();
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
+  }
 
   const datasets = P_KEYS.map((key, i) => ({
     label: key,
@@ -772,12 +785,17 @@ function buildChart() {
     fill: false, tension: 0.35
   }));
 
-  plotPointDS = {
-    label: 'จุดที่ตรวจสอบ', data: [], type: 'scatter',
-    borderColor: '#6A1B9A', backgroundColor: '#9C27B0',
-    pointRadius: 8, pointHoverRadius: 10, pointStyle: 'circle', showLine: false
-  };
-  datasets.push(plotPointDS);
+  datasets.push({
+    label: 'จุดที่ตรวจสอบ',
+    data: [],
+    type: 'scatter',
+    borderColor: '#6A1B9A',
+    backgroundColor: '#9C27B0',
+    pointRadius: 8,
+    pointHoverRadius: 10,
+    pointStyle: 'circle',
+    showLine: false
+  });
 
   chartInstance = new Chart(ctx, {
     type: 'line',
@@ -823,7 +841,7 @@ function buildLegend(accent) {
       const lbl = i === 3 ? k + ' (ค่ากลาง)' : k;
       return `<span class="legend-item"><span class="legend-swatch" style="background:${col}"></span>${lbl}</span>`;
     }).join('') +
-    `<span class="legend-item"><span class="legend-swatch" style="background:#9C27B0;height:10px;width:10px;border-radius:50%;"></span>จุดที่ตรวจสอบ</span>`;
+    `<span class="legend-item"><span class="legend-swatch" style="background:#9C27B0;height:10px;width:10px;border-radius:50%;display:inline-block;"></span>จุดที่ตรวจสอบ</span>`;
 }
 
 function setChartGender(g) {
@@ -841,18 +859,27 @@ function setChartMode(m) {
 }
 
 function checkPoint() {
-  const ageVal  = parseFloat(document.getElementById('cipAge').value);
+  const ageVal  = parseInt(document.getElementById('cipAge').value, 10);
   const measVal = parseFloat(document.getElementById('cipVal').value);
-  if (isNaN(ageVal) || ageVal < 0 || ageVal > 36) { showCipResult('⚠️ กรุณากรอกอายุระหว่าง 0–36 เดือน', 'warn'); return; }
-  if (isNaN(measVal) || measVal <= 0) { showCipResult('⚠️ กรุณากรอกค่าที่ต้องการตรวจสอบ', 'warn'); return; }
+
+  if (isNaN(ageVal) || ageVal < 0 || ageVal > 36) {
+    showCipResult('⚠️ กรุณากรอกอายุระหว่าง 0–36 เดือน (จำนวนเต็ม)', 'warn');
+    return;
+  }
+  if (isNaN(measVal) || measVal <= 0) {
+    showCipResult('⚠️ กรุณากรอกค่าที่ต้องการตรวจสอบ', 'warn');
+    return;
+  }
 
   const data = chartMode === 'weight' ? WHO_WEIGHT[chartGender] : WHO_HEIGHT[chartGender];
-  const idx  = Math.round(ageVal);
-  const [p3,p10,p25,p50,p75,p90,p97] = P_KEYS.map(k => data[k][idx]);
+  const [p3, p10, p25, p50, p75, p90, p97] = P_KEYS.map(k => data[k][ageVal]);
   const unit = chartMode === 'weight' ? 'กก.' : 'ซม.';
   const gt   = chartGender === 'boy' ? 'เด็กชาย' : 'เด็กหญิง';
 
-  if (plotPointDS) { plotPointDS.data = [{ x: ageVal, y: measVal }]; chartInstance && chartInstance.update(); }
+  if (chartInstance) {
+    chartInstance.data.datasets[PLOT_DS_INDEX].data = [{ x: ageVal, y: measVal }];
+    chartInstance.update();
+  }
 
   let msg, cls;
   if      (measVal < p3)   { msg = 'ต่ำกว่า P3 — น้ำหนัก/ส่วนสูงน้อยมาก ควรพบแพทย์';     cls = 'bad'; }
@@ -861,13 +888,16 @@ function checkPoint() {
   else if (measVal <= p75) { msg = 'อยู่ระหว่าง P25–P75 — ปกติดี อยู่ในช่วงกลาง ✅';       cls = 'good'; }
   else if (measVal <= p90) { msg = 'อยู่ระหว่าง P75–P90 — ปกติ (ค่อนข้างมาก)';             cls = 'good'; }
   else if (measVal <= p97) { msg = 'อยู่ระหว่าง P90–P97 — ค่อนข้างมาก ควรติดตาม';          cls = 'warn'; }
-  else                     { msg = 'สูงกว่า P97 — เกินเกณฑ์ ควรพบแพทย์';                     cls = 'bad'; }
+  else                     { msg = 'สูงกว่า P97 — เกินเกณฑ์ ควรพบแพทย์';                    cls = 'bad'; }
 
   showCipResult(`${gt} | อายุ ${ageVal} เดือน | ${measVal} ${unit} | ${msg}`, cls);
 }
 
 function clearPoint() {
-  if (plotPointDS) { plotPointDS.data = []; chartInstance && chartInstance.update(); }
+  if (chartInstance) {
+    chartInstance.data.datasets[PLOT_DS_INDEX].data = [];
+    chartInstance.update();
+  }
   document.getElementById('cipAge').value = '';
   document.getElementById('cipVal').value = '';
   document.getElementById('cipResult').style.display = 'none';
@@ -887,6 +917,13 @@ async function searchHistory() {
   const id = document.getElementById('searchId').value.trim();
   if (id.length !== 13) { alert('กรุณากรอกเลขบัตรประชาชน 13 หลัก'); return; }
 
+  const btn  = document.getElementById('searchBtn');
+  const icon = document.getElementById('searchIcon');
+  const text = document.getElementById('searchText');
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;"></span>';
+  text.textContent = 'กำลังค้นหา...';
+
   document.getElementById('searchResults').innerHTML =
     `<div class="card"><div class="empty-state"><span class="empty-icon">⏳</span><p>กำลังค้นหาข้อมูล...</p></div></div>`;
 
@@ -896,6 +933,10 @@ async function searchHistory() {
   } catch (e) {
     document.getElementById('searchResults').innerHTML =
       `<div class="alert alert-error">❌ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '🔍';
+    text.textContent = 'ค้นหา';
   }
 }
 

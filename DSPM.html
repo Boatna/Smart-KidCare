@@ -191,16 +191,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--g);box-s
         <input type="text" id="childName" placeholder="กรอกชื่อ-นามสกุลเด็ก..." oninput="onNameInput()">
       </div>
       <div class="fg">
-        <label class="fl">วันเกิด (คำนวณอายุอัตโนมัติ)</label>
-        <input type="date" id="childBirthdate" onchange="calcAge()">
-        <div id="ageBadge" style="display:none;margin-top:6px"><span class="abadge" id="ageTxt"></span></div>
-      </div>
-      <div class="fg">
         <label class="fl">ช่วงวัยที่ประเมิน <span class="req">*</span></label>
         <select id="ageGroup" onchange="onAgeChange()">
           <option value="">⏳ กำลังโหลด...</option>
         </select>
-        <div id="keyNotice" class="notice">⭐ ช่วงวัยนี้เป็น <b>ช่วงคัดกรองหลัก</b> ควรดำเนินการโดยเจ้าหน้าที่สาธารณสุข</div>
         <div id="histBox" class="histbox">
           <div style="font-weight:700;color:var(--g);margin-bottom:6px">📋 ประวัติการประเมินก่อนหน้า</div>
           <div id="histList"></div>
