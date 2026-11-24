@@ -136,10 +136,8 @@ const PWA = (function () {
   }
 
   function scheduleEvaluate() {
-    clearTimeout(evalTimer);
-    const minWait = isStandalone ? 3000 : 5000;
-    const delay = Math.max(minWait - Math.round(performance.now()), 300);
-    evalTimer = setTimeout(evaluatePrompts, delay);
+    // ปิดป๊อปอัพอัตโนมัติ: ผู้ใช้กดติดตั้งจากเมนู Sidebar และกดแจ้งเตือนจากปุ่มกระดิ่งบน Header แทน
+    return;
   }
 
   function evaluatePrompts() {

@@ -1,0 +1,324 @@
+/* ==========================================================================
+   Employee Portal — Responsive App Shell (Mobile-first)
+   โหลดต่อจาก css/styles.css  |  ทำงานเมื่อ js/shell.js เติม class "has-shell" ให้ <body>
+   Breakpoints:  มือถือ < 768 | แท็บเล็ต 768–1024 | คอมพิวเตอร์ ≥ 1025
+   ========================================================================== */
+
+/* ---------- 1. Tokens ---------- */
+:root {
+  --hdr-h: 60px;          /* ความสูง Top Header */
+  --sb-w: 0px;            /* ความกว้าง Sidebar ที่กินพื้นที่เนื้อหา */
+  --bn-h: 0px;            /* ความสูง Bottom Nav (เฉพาะมือถือ) */
+  --sbw-full: 224px;
+  --sbw-mini: 68px;
+  --tap: 44px;            /* ขนาดจุดกดขั้นต่ำ */
+  --navbar-height: var(--hdr-h);
+}
+@media (max-width: 767px)  { :root { --hdr-h: 60px; --bn-h: 62px; } }
+@media (min-width: 768px) and (max-width: 1024px) { :root { --hdr-h: 64px; --sb-w: var(--sbw-mini); } }
+@media (min-width: 1025px) { :root { --hdr-h: 68px; --sb-w: var(--sbw-full); } }
+
+/* ---------- 2. Page frame ---------- */
+body.has-shell {
+  transition: padding-left .22s ease;
+  padding-left: var(--sb-w);
+  padding-bottom: calc(var(--bn-h) + var(--safe-bottom, 0px));
+}
+.has-shell .main-content {
+  min-width: 0;
+  max-width: 1360px;
+  padding: clamp(1rem, 2.2vw, 2rem) clamp(1rem, 2.4vw, 2rem) 2.5rem;
+  overflow-x: clip;
+}
+.has-shell .page-title { font-size: clamp(1.3rem, 1.05rem + 1vw, 2rem); }
+.has-shell .page-subtitle { font-size: clamp(.875rem, .82rem + .25vw, 1.025rem); }
+
+/* ---------- 3. Top Header (ใช้ .navbar เดิม) ---------- */
+.has-shell .navbar nav,
+.has-shell .btn-pwa-nav { display: none !important; }      /* เมนูย้ายไป Sidebar / Bottom Nav */
+.has-shell .nav-container {
+  max-width: none;
+  height: var(--hdr-h);
+  padding: 0 clamp(.75rem, 2vw, 2rem);
+  gap: .5rem;
+}
+.has-shell .nav-mobile-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: var(--tap); height: var(--tap); order: -2; flex-shrink: 0;
+  border-radius: var(--radius-sm);
+}
+.has-shell .brand { order: -1; flex: 1 1 auto; min-width: 0; }
+.has-shell .brand span { max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.has-shell .nav-user { margin-left: 0; gap: .25rem; }
+.has-shell .btn-logout { width: var(--tap); height: var(--tap); }
+.has-shell .btn-notification-nav { width: var(--tap); height: var(--tap); flex-shrink: 0; }
+
+.header-title {
+  display: none; flex: 1 1 auto; min-width: 0;
+  font-family: var(--font-heading, 'Prompt', sans-serif);
+  font-size: 1.1rem; font-weight: 600; color: var(--primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (min-width: 768px) {
+  .has-shell .brand { display: none; }
+  .header-title { display: block; }
+}
+@media (min-width: 1025px) {
+  .header-title { font-size: 1.15rem; }
+}
+@media (max-width: 575px) {
+  .has-shell .user-badge { padding: 0; border: 0; background: transparent; }
+  .has-shell .user-badge .user-info { display: none; }
+}
+
+/* ---------- 4. Sidebar (Desktop เต็ม / Tablet ไอคอน / Mobile Drawer) ---------- */
+.app-sidebar {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 1050;
+  width: var(--sbw-full);
+  display: flex; flex-direction: column;
+  padding-top: var(--safe-top, 0px);
+  background: var(--primary);
+  color: rgba(255, 255, 255, .86);
+  overflow-y: auto; overscroll-behavior: contain;
+  transition: transform .25s cubic-bezier(.16, 1, .3, 1), width .22s ease, visibility 0s;
+}
+.sb-brand {
+  display: flex; align-items: center; gap: .75rem;
+  min-height: var(--hdr-h); padding: 0 1rem; flex-shrink: 0;
+  color: #fff; font-family: var(--font-heading, 'Prompt', sans-serif);
+  font-weight: 600; font-size: .98rem;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+.sb-brand img { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.sb-brand-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-nav { list-style: none; display: flex; flex-direction: column; gap: .25rem; padding: .85rem .65rem; flex: 1; }
+.sb-link {
+  display: flex; align-items: center; gap: .85rem;
+  width: 100%; min-height: var(--tap); padding: 0 .9rem;
+  border: 0; border-radius: 10px; background: none; cursor: pointer;
+  color: rgba(255, 255, 255, .86); font: inherit; font-size: .95rem; font-weight: 500; text-align: left;
+  transition: background .18s ease, color .18s ease;
+}
+.sb-link svg { flex: 0 0 22px; }
+.sb-link:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.sb-link.active { background: rgba(255, 255, 255, .18); color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 #fff; }
+.sb-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-foot { padding: .75rem .65rem calc(.75rem + var(--safe-bottom, 0px)); border-top: 1px solid rgba(255, 255, 255, .12); }
+.sb-user { display: flex; align-items: center; gap: .7rem; padding: .35rem .4rem .6rem; color: #fff; min-width: 0; }
+.sb-user .avatar { flex-shrink: 0; background: rgba(255, 255, 255, .2); }
+.sb-user-info { min-width: 0; line-height: 1.3; }
+.sb-user-name { display: block; font-weight: 600; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-user-role { display: block; font-size: .75rem; color: rgba(255, 255, 255, .7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.app-scrim {
+  position: fixed; inset: 0; z-index: 1040; display: none;
+  background: rgba(11, 42, 91, .45);
+  opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s .2s;
+}
+.app-scrim.show { opacity: 1; visibility: visible; transition: opacity .2s ease; }
+
+/* Mobile: Drawer */
+@media (max-width: 767px) {
+  .app-sidebar { width: min(300px, 86vw); transform: translateX(-100%); visibility: hidden; transition: transform .25s cubic-bezier(.16, 1, .3, 1), visibility 0s .25s; }
+  .app-sidebar.open { transform: none; visibility: visible; box-shadow: var(--shadow-xl); transition: transform .25s cubic-bezier(.16, 1, .3, 1), visibility 0s; }
+  .app-scrim { display: block; }
+}
+/* Tablet: Mini sidebar (กดขยายได้) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .app-sidebar { width: var(--sbw-mini); }
+  .app-sidebar.expanded { width: var(--sbw-full); box-shadow: var(--shadow-xl); }
+  .app-scrim { display: block; }
+  .app-sidebar:not(.expanded) .sb-label,
+  .app-sidebar:not(.expanded) .sb-brand-text,
+  .app-sidebar:not(.expanded) .sb-user-info { display: none; }
+  .app-sidebar:not(.expanded) .sb-link { justify-content: center; padding: 0; }
+  .app-sidebar:not(.expanded) .sb-brand,
+  .app-sidebar:not(.expanded) .sb-user { justify-content: center; padding-left: 0; padding-right: 0; }
+}
+
+/* ---------- 5. Bottom Navigation (มือถือ) ---------- */
+.bottom-nav { display: none; }
+@media (max-width: 767px) {
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 95;
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    padding-bottom: var(--safe-bottom, 0px);
+    background: #fff; border-top: 1px solid var(--border-color);
+    box-shadow: 0 -2px 12px rgba(16, 36, 74, .08);
+  }
+  .bn-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: var(--bn-h); min-width: var(--tap); padding: 6px 2px;
+    border: 0; background: none; cursor: pointer; position: relative;
+    font: inherit; font-size: .7rem; font-weight: 500; line-height: 1.2;
+    color: var(--text-muted);
+  }
+  .bn-item svg { width: 24px; height: 24px; }
+  .bn-item.active { color: var(--primary); font-weight: 600; }
+  .bn-item.active::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--secondary, var(--primary)); }
+
+  /* ยกองค์ประกอบลอยให้พ้น Bottom Nav */
+  .has-shell .back-to-top { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + .75rem); }
+  .has-shell .toast-container { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + .75rem); }
+  .has-shell .pwa-prompt { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + .5rem); }
+  body.has-shell.has-pwa-prompt .back-to-top,
+  body.has-shell.has-pwa-prompt .toast-container { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + 9rem); }
+}
+
+/* ---------- 6. Dashboard / Card grids ---------- */
+/* มือถือ 1 คอลัมน์ → แท็บเล็ต 2 → คอมพิวเตอร์ 3–4 */
+.has-shell .stats-grid,
+.has-shell .news-grid,
+.has-shell .portal-main .news-grid,
+.has-shell .apps-grid,
+.has-shell .youtube-grid { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+
+@media (min-width: 768px) {
+  .has-shell .stats-grid,
+  .has-shell .news-grid,
+  .has-shell .portal-main .news-grid,
+  .has-shell .apps-grid,
+  .has-shell .youtube-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+}
+@media (min-width: 1025px) {
+  .has-shell .stats-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .has-shell .news-grid,
+  .has-shell .portal-main .news-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+  .has-shell .apps-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .has-shell .youtube-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* หน้าแรก: ข่าว + ทางลัดระบบงาน — Sidebar กินพื้นที่แล้ว จึงแยก 2 คอลัมน์เมื่อกว้างพอ */
+.has-shell .portal-layout { grid-template-columns: minmax(0, 1fr); }
+.has-shell .quick-apps-panel { position: static; order: -1; padding: 1rem; }
+.has-shell .quick-apps-grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: .6rem; }
+.has-shell .quick-app { min-height: var(--tap); padding: .7rem .3rem; }
+.has-shell .quick-app-icon { width: 42px; height: 42px; }
+.has-shell .quick-app-name { font-size: .75rem; }
+@media (min-width: 1360px) {
+  .has-shell .portal-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+  .has-shell .quick-apps-panel { position: sticky; order: 0; top: calc(var(--hdr-h) + var(--safe-top, 0px) + 1rem); }
+  .has-shell .quick-apps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Carousel บนจอกลาง: ใช้เลย์เอาต์ซ้อน (ข้อความทับรูป) ให้อ่านง่าย */
+@media (max-width: 1024px) {
+  .has-shell .carousel-float-arrow { display: none; }
+}
+
+/* ---------- 7. ตาราง ---------- */
+/* แท็บเล็ต/คอมพิวเตอร์: ตารางปกติ + เลื่อนแนวนอนเฉพาะกล่องตาราง */
+.has-shell .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* มือถือ: แปลงแถวเป็น Card List (JS เติม data-label ให้ <td> อัตโนมัติ) */
+@media (max-width: 767px) {
+  .has-shell .table-container { background: transparent; border: 0; box-shadow: none; overflow: visible; }
+  .has-shell .table-header-actions { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: .75rem; }
+  .has-shell .data-table,
+  .has-shell .data-table tbody { display: block; width: 100%; min-width: 0; }
+  .has-shell .data-table thead { display: none; }
+  .has-shell .data-table tr {
+    display: block; margin-bottom: .75rem; padding: .35rem .95rem;
+    background: #fff; border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  }
+  .has-shell .data-table td {
+    display: grid; grid-template-columns: minmax(84px, 36%) minmax(0, 1fr); gap: .6rem; align-items: center;
+    max-width: none !important; padding: .6rem 0; border-bottom: 1px dashed var(--border-light);
+    font-size: .9rem; overflow-wrap: anywhere; white-space: normal !important;
+  }
+  .has-shell .data-table td:last-child { border-bottom: 0; }
+  .has-shell .data-table td::before { content: attr(data-label); font-size: .78rem; font-weight: 600; color: var(--text-secondary); }
+  .has-shell .data-table td:not([data-label]) { grid-template-columns: minmax(0, 1fr); }
+  .has-shell .data-table td:not([data-label])::before { display: none; }
+  .has-shell .data-table tr:hover td { background: transparent; }
+  .has-shell .table-actions { flex-wrap: wrap; gap: .5rem; }
+  .has-shell .table-actions .btn { min-width: var(--tap); min-height: var(--tap); }
+  .has-shell .data-table select.form-control { min-height: var(--tap); width: 100%; }
+  .has-shell .pagination-wrapper { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); }
+  .has-shell .pagination-btn { min-width: var(--tap); min-height: var(--tap); }
+}
+
+/* ---------- 8. ฟอร์ม & Modal ---------- */
+@media (max-width: 767px) {
+  .has-shell .form-grid-2 { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+  .has-shell .form-control { min-height: var(--tap); }
+  .has-shell textarea.form-control { min-height: 120px; }
+
+  /* Modal = Bottom Sheet, ปุ่มยืนยันติดขอบล่างและกดง่าย */
+  .modal-backdrop { padding: 0; align-items: flex-end; }
+  .modal-content { max-width: 100%; max-height: 92dvh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .modal-footer {
+    position: sticky; bottom: 0; z-index: 2; flex-direction: column-reverse; gap: .5rem;
+    padding: .85rem 1.25rem calc(.85rem + var(--safe-bottom, 0px));
+  }
+  .modal-footer .btn { width: 100%; min-height: var(--tap); }
+
+  /* ฟอร์มแจ้งปัญหา: ปุ่มส่งเต็มความกว้างและลอยเหนือ Bottom Nav */
+  .has-shell .contact-card { padding: 1.25rem 1rem; overflow: visible; }
+  .has-shell #contactForm > div:last-child {
+    position: sticky; z-index: 5; margin-top: 1rem !important; padding: .6rem 0;
+    bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + .5rem);
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 35%);
+  }
+  .has-shell #btnSubmitContact { width: 100%; height: 50px; }
+
+  /* ตัวกรอง/แท็บแอดมิน: แถบเลื่อนแนวนอน กดง่าย */
+  .has-shell .filter-btn,
+  .has-shell .admin-nav-item { min-height: var(--tap); display: inline-flex; align-items: center; }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+  .has-shell .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modal-content { max-width: min(680px, 92%); }
+}
+
+/* ---------- 9. หน้า Admin ---------- */
+@media (max-width: 1024px) {
+  .has-shell .admin-layout { flex-direction: column; gap: 1rem; }
+  .has-shell .admin-sidebar {
+    width: 100%; position: sticky; z-index: 50;
+    top: calc(var(--hdr-h) + var(--safe-top, 0px));
+    padding: .5rem .75rem;
+  }
+  .has-shell .admin-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; gap: .4rem; }
+  .has-shell .admin-nav::-webkit-scrollbar { display: none; }
+  .has-shell .admin-nav-item { white-space: nowrap; border-radius: var(--radius-full); padding: 0 1rem; min-height: var(--tap); }
+}
+@media (min-width: 1025px) {
+  .has-shell .admin-sidebar { width: 230px; top: calc(var(--hdr-h) + var(--safe-top, 0px) + 1rem); }
+}
+
+/* ---------- 10. จุดกดสำหรับหน้าจอสัมผัส ---------- */
+@media (pointer: coarse) {
+  .btn, .btn-sm { min-height: var(--tap); }
+  .filter-btn { min-height: var(--tap); }
+  .modal-close, .toast-close { min-width: var(--tap); min-height: var(--tap); }
+}
+
+/* ---------- 11. ป้องกันล้นแนวนอน ---------- */
+.has-shell img, .has-shell iframe, .has-shell video, .has-shell svg { max-width: 100%; }
+.has-shell .card, .has-shell .news-card, .has-shell .app-card, .has-shell .youtube-card,
+.has-shell .stat-card, .has-shell .admin-content { min-width: 0; }
+.has-shell pre, .has-shell code { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar, .app-scrim { transition: none !important; }
+}
+
+/* ---------- 12. Desktop: Sidebar ขนาดกะทัดรัด + กดย่อ/ขยายได้ ---------- */
+@media (min-width: 1025px) {
+  .sb-nav { padding: .6rem .5rem; gap: .15rem; }
+  .sb-link { min-height: 40px; padding: 0 .8rem; gap: .7rem; font-size: .9rem; }
+  .sb-link svg { width: 20px; height: 20px; flex-basis: 20px; }
+  .sb-brand { padding: 0 .9rem; }
+  .sb-user-name { font-size: .85rem; }
+
+  /* ย่อเหลือแถบไอคอน (จำค่าไว้ใน localStorage) */
+  body.sb-collapsed { --sb-w: var(--sbw-mini); }
+  body.sb-collapsed .app-sidebar { width: var(--sbw-mini); }
+  body.sb-collapsed .app-sidebar .sb-label,
+  body.sb-collapsed .app-sidebar .sb-brand-text,
+  body.sb-collapsed .app-sidebar .sb-user-info { display: none; }
+  body.sb-collapsed .app-sidebar .sb-link { justify-content: center; padding: 0; }
+  body.sb-collapsed .app-sidebar .sb-brand,
+  body.sb-collapsed .app-sidebar .sb-user { justify-content: center; padding-left: 0; padding-right: 0; }
+}

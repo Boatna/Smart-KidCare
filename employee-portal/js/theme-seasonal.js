@@ -224,8 +224,19 @@ const SeasonalTheme = (function() {
     return Object.values(THEMES);
   }
 
+  /** เตือนใน Console เมื่อตารางวันจันทรคติหมดอายุ (ปีปัจจุบันเกินปีสุดท้ายในตาราง) */
+  function warnIfLunarTableExpired() {
+    const years = Object.keys(LUNAR_HOLIDAYS).map(k => Number(k.slice(0, 4)));
+    const maxYear = Math.max.apply(null, years);
+    const { year } = getBangkokParts();
+    if (year > maxYear) {
+      console.warn(`[SeasonalTheme] LUNAR_HOLIDAYS มีข้อมูลถึงปี ${maxYear} เท่านั้น — กรุณาเติมวันลอยกระทง/วันพระใหญ่ของปี ${year}`);
+    }
+  }
+
   function init() {
     if (typeof document === "undefined") return;
+    warnIfLunarTableExpired();
 
     // 1) ตั้งสีธีมทันที (ลดอาการกะพริบเป็นสีฟ้าก่อน)
     const id = detectSeasonalTheme();

@@ -449,9 +449,12 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await API.get("getVideos");
       if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-        youtubeVideos = res.data.slice(0, 3);
-        localStorage.setItem("emp_portal_youtube_videos", JSON.stringify(youtubeVideos));
-        renderYouTubeVideos();
+        const fresh = res.data.slice(0, 3);
+        const changed = JSON.stringify(fresh) !== JSON.stringify(youtubeVideos);
+        youtubeVideos = fresh;
+        try { localStorage.setItem("emp_portal_youtube_videos", JSON.stringify(fresh)); } catch (e2) {}
+        // วาดใหม่เฉพาะเมื่อข้อมูลเปลี่ยน มิฉะนั้น iframe YouTube จะโหลดซ้ำ/กะพริบ
+        if (changed) renderYouTubeVideos();
       }
     } catch (e) {
       // Continue with current videos if offline

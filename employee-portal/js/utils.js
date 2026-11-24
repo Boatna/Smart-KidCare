@@ -509,7 +509,7 @@ const Utils = (function() {
       if (user) {
         userContainer.innerHTML = `
           <div class="user-badge animate-fade-in">
-            <div class="avatar">${user.name ? user.name.charAt(0).toUpperCase() : 'U'}</div>
+            <div class="avatar">${escapeHtml(user.name ? user.name.charAt(0).toUpperCase() : 'U')}</div>
             <div class="user-info">
               <span class="user-name">
                 <span class="pulse-indicator" title="Online"></span>

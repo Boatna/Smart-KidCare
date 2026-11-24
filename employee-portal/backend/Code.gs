@@ -118,7 +118,7 @@ function hashPinLegacy_(employeeId, pin) {
 // สร้าง ID ไม่ซ้ำ: prefix + วันเวลา(วินาที) + เลขสุ่ม 3 หลัก (เดิมใช้ 5-6 หลักท้ายของ timestamp ซึ่งวนซ้ำทุก ~16 นาที)
 function genId_(prefix) {
   const stamp = Utilities.formatDate(new Date(), TZ, "yyMMddHHmmss");
-  const rand = Math.floor(Math.random() * 900) + 100;
+  const rand = Math.floor(Math.random() * 90000) + 10000; // 5 หลัก: ลดโอกาส ID ซ้ำเมื่อบันทึกพร้อมกันในวินาทีเดียวกัน
   return prefix + stamp + rand;
 }
 
@@ -142,7 +142,7 @@ function loginFailKey_(employeeId) {
 // จองสิทธิ์พยายาม Login แบบ atomic (ใช้ Lock สั้นๆ) กัน Brute-force ด้วยการยิง request พร้อมกัน
 function reserveLoginAttempt_(cache, failKey) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(5000);
+  lock.waitLock(10000);
   try {
     const count = Number(cache.get(failKey) || 0);
     if (count >= MAX_LOGIN_FAILS) return false;
@@ -489,72 +489,51 @@ function getSchemaInfo() {
   return { success: true, headers: headers };
 }
 
+// รายการคำสั่ง "อ่านข้อมูล" ทั้งหมด — เรียกได้ทั้งแบบ GET (ไม่มี token) และ POST (แนบ token ใน body)
+// การส่ง token ผ่าน POST ทำให้ token ไม่ไปปรากฏใน URL / ประวัติเบราว์เซอร์ / Log ของเซิร์ฟเวอร์
+const READ_ACTIONS = ["ping", "getNews", "getNewsById", "getApps", "getUsers", "getAdmins", "checkAdmin",
+  "getContactRequests", "getLoginLogs", "getAdminLogs", "getDashboardStats", "getVideos", "getSchemaInfo"];
+
+function handleRead_(action, params, token) {
+  params = params || {};
+  const wantsAll = String(params.all) === "true";
+  if (wantsAll) params.all = "true";
+
+  // ---- Authorization ----
+  const ADMIN_ONLY = ["getUsers", "getAdmins", "checkAdmin", "getContactRequests", "getLoginLogs", "getAdminLogs", "getDashboardStats", "getSchemaInfo"];
+  const ALL_FLAG_ACTIONS = ["getNews", "getApps", "getVideos"];
+
+  if (ADMIN_ONLY.indexOf(action) !== -1 || (wantsAll && ALL_FLAG_ACTIONS.indexOf(action) !== -1)) {
+    const auth = requireAdmin_(token);
+    if (auth.error) return auth.error;
+  } else if (action === "getApps") {
+    const auth = requireSession_(token);
+    if (auth.error) return auth.error;
+  }
+
+  switch (action) {
+    case "ping":
+      return { success: true, message: "Employee Portal API is live!", timestamp: new Date().toISOString() };
+    case "getNews": return getNewsData(params);
+    case "getNewsById": return getNewsByIdData(params.id);
+    case "getApps": return getAppsData(params);
+    case "getUsers": return getUsersData(params);
+    case "getAdmins": return getAdminsData();
+    case "checkAdmin": return checkAdminStatus(params.employeeId);
+    case "getContactRequests": return getContactRequestsData(params);
+    case "getLoginLogs": return getLoginLogsData(params);
+    case "getAdminLogs": return getAdminLogsData(params);
+    case "getDashboardStats": return getDashboardStatsData();
+    case "getVideos": return getVideosData(params);
+    case "getSchemaInfo": return getSchemaInfo();
+    default: return { success: false, message: "Unknown GET action: " + action };
+  }
+}
+
 function doGet(e) {
   try {
     const params = (e && e.parameter) ? e.parameter : {};
-    const action = params.action || "";
-    const token = params.token || "";
-    const wantsAll = params.all === "true";
-
-    // ---- Authorization ----
-    const ADMIN_ONLY = ["getUsers", "getAdmins", "checkAdmin", "getContactRequests", "getLoginLogs", "getAdminLogs", "getDashboardStats", "getSchemaInfo"];
-    const ALL_FLAG_ACTIONS = ["getNews", "getApps", "getVideos"];
-
-    if (ADMIN_ONLY.indexOf(action) !== -1 || (wantsAll && ALL_FLAG_ACTIONS.indexOf(action) !== -1)) {
-      const auth = requireAdmin_(token);
-      if (auth.error) return createJsonResponse(auth.error);
-    } else if (action === "getApps") {
-      const auth = requireSession_(token);
-      if (auth.error) return createJsonResponse(auth.error);
-    }
-
-    let result = { success: false, message: "Invalid action" };
-
-    switch (action) {
-      case "ping":
-        result = { success: true, message: "Employee Portal API is live!", timestamp: new Date().toISOString() };
-        break;
-      case "getNews":
-        result = getNewsData(params);
-        break;
-      case "getNewsById":
-        result = getNewsByIdData(params.id);
-        break;
-      case "getApps":
-        result = getAppsData(params);
-        break;
-      case "getUsers":
-        result = getUsersData(params);
-        break;
-      case "getAdmins":
-        result = getAdminsData();
-        break;
-      case "checkAdmin":
-        result = checkAdminStatus(params.employeeId);
-        break;
-      case "getContactRequests":
-        result = getContactRequestsData(params);
-        break;
-      case "getLoginLogs":
-        result = getLoginLogsData(params);
-        break;
-      case "getAdminLogs":
-        result = getAdminLogsData(params);
-        break;
-      case "getDashboardStats":
-        result = getDashboardStatsData();
-        break;
-      case "getVideos":
-        result = getVideosData(params);
-        break;
-      case "getSchemaInfo":
-        result = getSchemaInfo();
-        break;
-      default:
-        result = { success: false, message: "Unknown GET action: " + action };
-    }
-
-    return createJsonResponse(result);
+    return createJsonResponse(handleRead_(params.action || "", params, params.token || ""));
   } catch (error) {
     return createJsonResponse({ success: false, message: error.toString() });
   }
@@ -581,6 +560,11 @@ function doPost(e) {
     const token = payload.token || (e && e.parameter && e.parameter.token) || "";
     delete payload.token;
 
+    // คำสั่งอ่านข้อมูลที่ส่งมาทาง POST (แนบ token ใน body) — ไม่ต้องใช้ Lock
+    if (READ_ACTIONS.indexOf(action) !== -1) {
+      return createJsonResponse(handleRead_(action, payload, token));
+    }
+
     // ---- Authorization ----
     const PUBLIC_ACTIONS = ["login", "submitContact", "savePushToken"];
     if (PUBLIC_ACTIONS.indexOf(action) === -1) {
@@ -595,7 +579,8 @@ function doPost(e) {
 
     // ---- ป้องกันการเขียนชนกัน (Race Condition) ----
     let lock = null;
-    if (["login", "submitContact"].indexOf(action) === -1) {
+    // ไม่ล็อกคำสั่งที่ไม่แก้ข้อมูลหลักในชีต หรือ append อย่างเดียว (กันงานช้า เช่น อัปโหลดรูปไป Drive ไปขวาง Login)
+    if (["login", "submitContact", "savePushToken", "uploadNewsImage"].indexOf(action) === -1) {
       lock = LockService.getScriptLock();
       lock.waitLock(20000);
     }
@@ -670,6 +655,14 @@ function handleLogin(payload) {
   }
   if (!allowed) {
     recordLoginLog(employeeId, "Unknown", clientIp, "Failed (Locked)");
+    // แจ้งแอดมินครั้งเดียวต่อการล็อก (เห็นในหน้า "ประวัติการแก้ไข") เพื่อแยกว่าเจ้าของลืม PIN หรือมีคนพยายามเดา
+    try {
+      const noteKey = "lockednote_" + failKey;
+      if (!cache.get(noteKey)) {
+        cache.put(noteKey, "1", LOCKOUT_SECONDS);
+        recordAdminLog("SYSTEM", "Lock User (auto)", "Too many failed PIN attempts for Employee: " + employeeId + " (locked " + (LOCKOUT_SECONDS / 60) + " min)");
+      }
+    } catch (e) {}
     return { success: false, message: "ใส่ PIN ผิดหลายครั้งเกินกำหนด กรุณารอ 15 นาทีแล้วลองใหม่" };
   }
 
@@ -1730,7 +1723,7 @@ function handleUpdateUser(payload) {
 
   const employeeId = cleanId(payload.employeeId);
   if (!employeeId) return { success: false, message: "ไม่พบรหัสพนักงาน" };
-  if (employeeId === cleanId(payload.adminId)) {
+  if (sameEmpId_(employeeId, payload.adminId)) {
     if (payload.isAdmin !== undefined && !payload.isAdmin) return { success: false, message: "ไม่สามารถถอดสิทธิ์ Admin ของตัวเองได้" };
     if (payload.status !== undefined && String(payload.status).toLowerCase() !== "active") return { success: false, message: "ไม่สามารถปิดการใช้งานบัญชีของตัวเองได้" };
   }
@@ -1762,7 +1755,11 @@ function handleUpdateUser(payload) {
       if (payload.status !== undefined && statusCol !== -1) sheet.getRange(rowIndex, statusCol + 1).setValue(safeCell_(payload.status));
       clearUserActiveCache_(employeeId);
 
-      if (payload.isAdmin !== undefined) {
+      const goingInactive = payload.status !== undefined && String(payload.status).toLowerCase() !== "active";
+      if (goingInactive) {
+        // ปิดบัญชีแล้ว ต้องถอนสิทธิ์ Admin ด้วย (เหมือนกับ toggleUserStatus)
+        syncAdminRole_(ss, employeeId, "", false);
+      } else if (payload.isAdmin !== undefined) {
         syncAdminRole_(ss, employeeId, payload.name || data[i][nameCol], Boolean(payload.isAdmin), payload.role);
       }
 
@@ -1821,7 +1818,7 @@ function handleToggleUserStatus(payload) {
   const newStatus = payload.status || "Active";
   if (!employeeId) return { success: false, message: "ไม่พบผู้ใช้ที่ระบุ" };
   if (["active", "inactive"].indexOf(String(newStatus).toLowerCase()) === -1) return { success: false, message: "สถานะไม่ถูกต้อง" };
-  if (String(newStatus).toLowerCase() !== "active" && cleanId(payload.adminId) === employeeId) {
+  if (String(newStatus).toLowerCase() !== "active" && sameEmpId_(payload.adminId, employeeId)) {
     return { success: false, message: "ไม่สามารถปิดการใช้งานบัญชีของตัวเองได้" };
   }
   const data = sheet.getDataRange().getValues();
@@ -1927,8 +1924,8 @@ function handleContactSubmit(payload) {
 
   ensureSheetHeaders_(sheet, SHEET_HEADERS.ContactRequest);
 
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0].map(normalizeHeader_);
+  // อ่านเฉพาะแถว Header (ไม่อ่านทั้งชีต เพราะ Ticket จะเพิ่มขึ้นเรื่อยๆ และฟังก์ชันนี้ทุกคนเรียกใช้)
+  const headers = getHeaderValues_(sheet).map(normalizeHeader_);
   const newRow = new Array(headers.length).fill("");
   headers.forEach((h, idx) => {
     if (h === "id" || h === "ticketid") newRow[idx] = id;
@@ -2027,20 +2024,25 @@ function handleUpdateContactStatus(payload) {
   return { success: false, message: "ไม่พบรายการที่ต้องการแก้ไข" };
 }
 
+const LOG_READ_LIMIT = 2000; // อ่านเฉพาะแถวล่าสุด กันชีต Log โตแล้วโหลดช้า
+
+function readLastRows_(sheet, maxRows) {
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow <= 1 || lastCol < 1) return [];
+  const count = Math.min(maxRows, lastRow - 1);
+  return sheet.getRange(lastRow - count + 1, 1, count, lastCol).getValues();
+}
+
 function getLoginLogsData(params) {
-  const ss = getDB();
-  const sheet = ss.getSheetByName("LoginLog");
+  const sheet = getDB().getSheetByName("LoginLog");
   if (!sheet) return { success: true, data: [] };
 
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return { success: true, data: [] };
   const list = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
+  readLastRows_(sheet, LOG_READ_LIMIT).forEach(row => {
     const dateTime = formatDateString(row[0]);
     const employeeId = String(row[1] || "").trim();
-    if (!dateTime && !employeeId) continue;
-
+    if (!dateTime && !employeeId) return;
     list.push({
       dateTime: dateTime,
       employeeId: employeeId,
@@ -2048,38 +2050,32 @@ function getLoginLogsData(params) {
       ip: String(row[3] || ""),
       status: String(row[4] || "")
     });
-  }
+  });
 
   list.sort((a, b) => dateValue_(b.dateTime) - dateValue_(a.dateTime));
-  if (list.length > 1000) list.length = 1000; // จำกัด 1,000 รายการล่าสุด กันโหลดช้าเมื่อ Log เยอะ
+  if (list.length > 1000) list.length = 1000;
   return { success: true, data: list };
 }
 
 function getAdminLogsData(params) {
-  const ss = getDB();
-  const sheet = ss.getSheetByName("LogAdmin");
+  const sheet = getDB().getSheetByName("LogAdmin");
   if (!sheet) return { success: true, data: [] };
 
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return { success: true, data: [] };
   const list = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
+  readLastRows_(sheet, LOG_READ_LIMIT).forEach(row => {
     const dateTime = formatDateString(row[0]);
     const adminId = String(row[1] || "").trim();
-
-    if (!dateTime && !adminId) continue;
-
+    if (!dateTime && !adminId) return;
     list.push({
       dateTime: dateTime,
       adminId: adminId,
       action: String(row[2] || ""),
       detail: String(row[3] || "")
     });
-  }
+  });
 
   list.sort((a, b) => dateValue_(b.dateTime) - dateValue_(a.dateTime));
-  if (list.length > 1000) list.length = 1000; // จำกัด 1,000 รายการล่าสุด กันโหลดช้าเมื่อ Log เยอะ
+  if (list.length > 1000) list.length = 1000;
   return { success: true, data: list };
 }
 
@@ -2088,12 +2084,23 @@ function getDashboardStatsData() {
   const countRows = (sheetName, onlyActive) => {
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return 0;
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return 0;
+
+    // ไม่ต้องกรองสถานะ: อ่านเฉพาะคอลัมน์แรก (เร็วกว่าอ่านทั้งชีต โดยเฉพาะ LoginLog)
+    if (!onlyActive) {
+      const firsts = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      let n = 0;
+      for (let i = 0; i < firsts.length; i++) {
+        const v = firsts[i][0];
+        if (v !== null && v !== undefined && String(v).trim() !== "") n++;
+      }
+      return n;
+    }
 
     const values = sheet.getDataRange().getValues();
-    if (values.length <= 1) return 0;
-
     const headers = values[0].map(normalizeHeader_);
-    const statusCol = onlyActive ? headers.indexOf("status") : -1;
+    const statusCol = headers.indexOf("status");
     let count = 0;
     for (let i = 1; i < values.length; i++) {
       const firstCell = values[i][0];
@@ -2107,9 +2114,9 @@ function getDashboardStatsData() {
   return {
     success: true,
     stats: {
-      users: countRows("Users", false),      // ผู้ใช้งานทั้งหมด
-      news: countRows("News", true),         // ข่าวที่เผยแพร่ (Active)
-      apps: countRows("Apps", true),         // แอปที่เปิดใช้งาน (Active)
+      users: countRows("Users", false),
+      news: countRows("News", true),
+      apps: countRows("Apps", true),
       contacts: countRows("ContactRequest", false),
       logins: countRows("LoginLog", false)
     }

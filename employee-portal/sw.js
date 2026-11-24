@@ -1,4 +1,4 @@
-const CACHE_NAME = "emp-portal-v2.4";
+const CACHE_NAME = "emp-portal-v2.7";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
   "./contact.html",
   "./admin.html",
   "./css/styles.css",
+  "./css/responsive.css",
   "./js/config.js",
   "./js/utils.js",
   "./js/auth.js",
@@ -18,6 +19,7 @@ const ASSETS_TO_CACHE = [
   "./js/contact.js",
   "./js/admin.js",
   "./js/pwa.js",
+  "./js/shell.js",
   "./manifest.json",
   "./assets/icons/app-icon.png",
   "./assets/icons/icon-192.png",

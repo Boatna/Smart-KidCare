@@ -46,6 +46,7 @@ const API = (function() {
       if (text.includes("<!DOCTYPE") || text.includes("<html")) {
         return {
           success: false,
+          transient: true,
           message: "Google Apps Script ส่งกลับเป็นหน้าเว็บแทน JSON (กรุณาตรวจสอบว่าได้ตั้งค่า Deploy Web App ให้ Who has access เป็น 'Anyone')"
         };
       }
@@ -66,24 +67,17 @@ const API = (function() {
 
   function networkError(err) {
     const msg = err && err.name === "AbortError" ? "หมดเวลาการเชื่อมต่อ" : ((err && err.message) || "Network Error");
-    return { success: false, message: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (" + msg + ")" };
+    return { success: false, transient: true, message: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (" + msg + ")" };
   }
 
-  /**
-   * Send HTTP GET to Google Apps Script Web App
-   * @param {string} action - API action name (e.g., "getNews", "getApps")
-   * @param {object} params - Query parameters
-   */
-  async function get(action, params = {}) {
-    if (!isGasConfigured()) {
-      return { success: false, message: "ยังไม่ได้ระบุ GAS_API_URL ในการตั้งค่าระบบ" };
-    }
+  // คำสั่งอ่านข้อมูลสาธารณะ (ไม่ต้อง Login) ใช้ GET ได้โดยไม่แนบ token
+  const PUBLIC_READS = ["ping", "getNews", "getNewsById", "getVideos"];
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  async function publicGet(action, params) {
     try {
-      const token = getToken();
-      const query = new URLSearchParams(Object.assign({ action }, params, token ? { token } : {})).toString();
-      const url = `${CONFIG.GAS_API_URL}?${query}`;
-      const response = await fetchWithTimeout(url, {
+      const query = new URLSearchParams(Object.assign({ action }, params)).toString();
+      const response = await fetchWithTimeout(`${CONFIG.GAS_API_URL}?${query}`, {
         method: "GET",
         cache: "no-store",
         headers: { "Accept": "application/json" }
@@ -93,6 +87,45 @@ const API = (function() {
       console.warn("GAS GET API request failed:", err);
       return networkError(err);
     }
+  }
+
+  // อ่านข้อมูลที่ต้อง Login ผ่าน POST: token อยู่ใน body ไม่ปรากฏใน URL / ประวัติเบราว์เซอร์
+  async function postRead(action, params) {
+    try {
+      const token = getToken();
+      const url = `${CONFIG.GAS_API_URL}?action=${encodeURIComponent(action)}`;
+      const response = await fetchWithTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(Object.assign({}, params, { action }, token ? { token } : {}))
+      });
+      return await parseResponse(response);
+    } catch (err) {
+      console.warn("GAS read (POST) request failed:", err);
+      return networkError(err);
+    }
+  }
+
+  /**
+   * อ่านข้อมูลจาก GAS
+   * - คำสั่งสาธารณะ: GET ไม่แนบ token
+   * - คำสั่งที่ต้อง Login หรือ all=true: POST แนบ token ใน body
+   * ถ้าล้มเหลวชั่วคราว (เครือข่าย / GAS แน่น ตอบเป็นหน้า HTML) จะลองใหม่ 1 ครั้ง
+   * (ใช้กับคำสั่ง "อ่าน" เท่านั้น ไม่ retry คำสั่งเขียน/Login กันทำซ้ำ)
+   */
+  async function get(action, params = {}) {
+    if (!isGasConfigured()) {
+      return { success: false, message: "ยังไม่ได้ระบุ GAS_API_URL ในการตั้งค่าระบบ" };
+    }
+    const needsAuth = PUBLIC_READS.indexOf(action) === -1 || String(params.all) === "true";
+    const run = () => (needsAuth ? postRead(action, params) : publicGet(action, params));
+
+    let res = await run();
+    if (res && res.transient) {
+      await sleep(1200);
+      res = await run();
+    }
+    return res;
   }
 
   /**

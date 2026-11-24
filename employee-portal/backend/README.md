@@ -96,7 +96,7 @@
 
 1. เปิด `https://script.google.com/macros/s/<DEPLOY_ID>/exec?action=ping`
    ต้องได้ `{"success":true,...}` — ถ้าได้ HTML/หน้า Login แสดงว่า Deploy ยังเป็น **Anyone with Google account** หรือ URL ผิด
-2. เปิด `...?action=getSchemaInfo` เพื่อดูชื่อ Header จริงของทุกชีต (ไม่ส่งข้อมูลพนักงานออกมา)
+2. `getSchemaInfo` ใช้ดูชื่อ Header จริงของทุกชีต แต่ **เป็นคำสั่งเฉพาะ Admin** (ต้องแนบ token) จึงเปิดตรงๆ ในเบราว์เซอร์ไม่ได้ — ให้เข้าหน้า Admin แล้วกด "ตรวจสอบโครงสร้างคอลัมน์" หรือเปิดชีตดู Header โดยตรงแทน
 3. ชีต `Users` **ต้องมี Header ชื่อ `PIN`** (หรือ `Password`) และ `Status` — ถ้าใช้ชื่ออื่น
    ระบบจะปฏิเสธการ Login พร้อมข้อความบอกสาเหตุ ไม่เดาคอลัมน์ผิดอีก
 4. ชีต `News` ควรมี `PublishDate` (เพื่อแสดง/เรียงวันที่) และ `Apps` ควรมี `Type`
