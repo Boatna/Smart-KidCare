@@ -1,19 +1,12 @@
-/**
- * ==============================================================================
- * AUTHENTICATION & SESSION MANAGEMENT
- * ==============================================================================
- */
-
 const Auth = (function() {
   const SESSION_KEY = "emp_portal_session";
-  const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000; // ต้องตรงกับ SESSION_TTL_MS ใน Code.gs
+  const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
   function getUser() {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return null;
       const user = JSON.parse(raw);
-      // Session เก่าที่ไม่มี token หรือหมดอายุแล้ว ให้ถือว่าไม่ได้ Login
       if (!user || !user.token || !user._savedAt || (Date.now() - user._savedAt) > SESSION_MAX_AGE_MS) {
         localStorage.removeItem(SESSION_KEY);
         return null;
@@ -68,7 +61,6 @@ const Auth = (function() {
     return true;
   }
 
-  // Attempt to detect client IP (non-blocking with timeout fallback)
   async function getClientIp() {
     try {
       const controller = typeof AbortController !== "undefined" ? new AbortController() : null;

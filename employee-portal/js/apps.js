@@ -1,11 +1,4 @@
-/**
- * ==============================================================================
- * APPLICATIONS DIRECTORY SCRIPT (apps.html)
- * ==============================================================================
- */
-
 document.addEventListener("DOMContentLoaded", () => {
-  // Guard: เฉพาะผู้ที่ Login แล้วเท่านั้น
   if (!Auth.requireAuth("login.html")) {
     return;
   }
@@ -21,7 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const categoryFilters = document.querySelectorAll(".filter-btn");
 
   async function loadApps() {
-    // Show Skeleton App Cards with shimmer animation
     appsGrid.innerHTML = Utils.renderAppsSkeletons(8);
 
     try {
@@ -40,9 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderApps() {
     let filtered = appsList.filter(app => {
-      // Category filter
       const matchesCat = currentCategory === "ALL" || (app.category && app.category.trim().toUpperCase() === currentCategory.trim().toUpperCase());
-      // Search filter
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch = !q ||
         (app.appName && app.appName.toLowerCase().includes(q)) ||
@@ -141,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  // Search Event with debounce
   let searchTimeout;
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
@@ -153,7 +142,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Category Filter Events
   categoryFilters.forEach(btn => {
     btn.addEventListener("click", () => {
       categoryFilters.forEach(b => b.classList.remove("active"));

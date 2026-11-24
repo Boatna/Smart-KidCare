@@ -1,12 +1,3 @@
-/**
- * ==============================================================================
- * NEWS PORTAL SCRIPT (index.html)
- * - 1. Responsive Carousel สำหรับเลื่อนดูข่าวเด่นวันนี้ (Touch Swipe + Auto-play)
- * - 2. การรองรับขนาดหน้าจอแบบ Responsive (Mobile, Tablet, Desktop)
- * - 3. วิดีโอประชาสัมพันธ์ YouTube 3 ช่อง (Embed + Link + Admin Edit)
- * ==============================================================================
- */
-
 document.addEventListener("DOMContentLoaded", () => {
   Utils.setupNavbar();
   Utils.initModals();
@@ -15,17 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentCategory = "ALL";
   let searchQuery = "";
 
-  // Elements
   const newsGrid = document.getElementById("newsGrid");
   const searchInput = document.getElementById("searchNews");
   const categoryFilters = document.querySelectorAll(".filter-btn");
 
-  // YouTube Videos Data
   let youtubeVideos = [];
-
-  // ==============================================================================
-  // 1. CAROUSEL ข่าวเด่นวันนี้ (Today's News Carousel)
-  // ==============================================================================
   let carouselIndex = 0;
   let carouselSlides = [];
   let carouselTimer = null;
@@ -42,14 +27,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Filter today's news
     const todayNews = items.filter(n => Utils.isToday(n.publishDate));
 
-    // If today has 2+ items, use today's news; otherwise use today's news + latest news up to 5 items
     if (todayNews.length >= 2) {
       carouselSlides = todayNews.slice(0, 5);
     } else {
-      // Prioritize today's news first, then the latest items
       const otherNews = items.filter(n => !Utils.isToday(n.publishDate));
       carouselSlides = [...todayNews, ...otherNews].slice(0, 5);
     }
@@ -61,8 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (carouselSection) carouselSection.style.display = "block";
     carouselIndex = 0;
-
-    // Render Track Slides (Modern Split-Hero on Desktop, Rich Card on Mobile)
     carouselTrack.innerHTML = carouselSlides.map((item, idx) => {
       const isTodayItem = Utils.isToday(item.publishDate);
       const rawImgUrl = item.imageUrl || "";
@@ -206,8 +186,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Pause autoplay on mouse hover
-  if (carouselSection) {
+  // Pause autoplay on mouse hover (เฉพาะอุปกรณ์ที่มีเมาส์จริง; บนมือถือ mouseleave ไม่ยิง ทำให้สไลด์หยุดค้าง)
+  const canHover = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (carouselSection && canHover) {
     carouselSection.addEventListener("mouseenter", stopCarouselAutoPlay);
     carouselSection.addEventListener("mouseleave", startCarouselAutoPlay);
   }
@@ -249,7 +230,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Keyboard Navigation
   document.addEventListener("keydown", (e) => {
-    if (document.activeElement && ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+    if (document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+    if (document.querySelector(".modal-backdrop.show")) return;
     if (e.key === "ArrowLeft") prevSlide();
     if (e.key === "ArrowRight") nextSlide();
   });
@@ -258,6 +240,21 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==============================================================================
   // 2. NEWS LIST & FILTERING
   // ==============================================================================
+  // เปิดข่าวตามลิงก์จากการแจ้งเตือน เช่น index.html?newsId=N123456
+  function openNewsFromQuery() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const newsId = params.get("newsId");
+      if (!newsId) return;
+      if (newsList.some(item => String(item.id) === String(newsId))) {
+        window.openNewsDetail(newsId);
+      }
+      params.delete("newsId");
+      const qs = params.toString();
+      history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : "") + window.location.hash);
+    } catch (e) {}
+  }
+
   async function loadNews() {
     newsGrid.innerHTML = Utils.renderNewsSkeletons(6);
 
@@ -268,6 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
         newsList = res.data;
         initCarousel(newsList);
         renderNews();
+        openNewsFromQuery();
       } else {
         showError(res.message || "ไม่สามารถดึงข้อมูลข่าวสารได้");
       }

@@ -1,25 +1,3 @@
-/**
- * ==============================================================================
- * SEASONAL THEME ENGINE (ระบบธีมเทศกาลและวันสำคัญอัตโนมัติ)
- * ==============================================================================
- * 1. ปีใหม่ & คริสต์มาส (25 ธ.ค. - 5 ม.ค.)
- * 2. วาเลนไทน์ (10 - 16 ก.พ.)
- * 3. สงกรานต์ (11 - 17 เม.ย.)
- * 4. ฮาโลวีน (25 - 31 ต.ค.)
- * 5. ลอยกระทง (ตาม LUNAR_HOLIDAYS)
- * 6. วันพระใหญ่ / วันพระ (ตาม LUNAR_HOLIDAYS)
- *
- * แก้ไขรอบนี้:
- *  - ใช้เวลาไทย (Asia/Bangkok) ไม่ใช่เวลาเครื่องผู้ใช้
- *  - ตั้ง data-theme ทันทีที่สคริปต์โหลด (ลดอาการหน้ากะพริบ) แล้วค่อยใส่แบนเนอร์ตอน DOM พร้อม
- *  - เปลี่ยน <meta name="theme-color"> ตามธีม
- *  - ครอบ localStorage/sessionStorage ด้วย try/catch
- *
- * วิธีเพิ่มวันพระ/วันเทศกาลปีถัดไป: เติมใน LUNAR_HOLIDAYS รูปแบบ "YYYY-MM-DD": "ชื่อธีม"
- * (ชื่อธีม: loykrathong | buddhist | newyear | valentine | songkran | halloween)
- * ==============================================================================
- */
-
 const SeasonalTheme = (function() {
   const STORAGE_KEY = "emp_seasonal_theme_override";
   const BANNER_DISMISSED_KEY = "emp_seasonal_banner_dismissed_";

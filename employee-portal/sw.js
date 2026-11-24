@@ -9,7 +9,7 @@
  */
 
 // เปลี่ยนเลขเวอร์ชันทุกครั้งที่แก้ไฟล์ เพื่อให้เครื่องผู้ใช้ล้างแคชเก่า
-const CACHE_NAME = "emp-portal-v2.1";
+const CACHE_NAME = "emp-portal-v2.2";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",

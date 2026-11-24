@@ -1,11 +1,4 @@
-/**
- * ==============================================================================
- * UTILITIES, UI COMPONENTS & SKELETON SCREEN ENGINE
- * ==============================================================================
- */
-
 const Utils = (function() {
-  // SVG Icon Map for crisp UI rendering without heavy external fonts
   const ICONS = {
     newspaper: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>',
     grid: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
@@ -45,19 +38,12 @@ const Utils = (function() {
       .replace(/'/g, "&#039;");
   }
 
-  /**
-   * Parse the date formats that GAS/Sheets actually return.
-   * Safari/iOS cannot parse "2026-11-20 00:00:00" reliably, so parse the
-   * date-only / local-datetime shapes manually instead of relying on Date().
-   */
   function parseDate(val) {
     if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
     if (typeof val === "number") return new Date(val);
 
     const s = String(val || "").trim();
     if (!s) return null;
-
-    // YYYY-MM-DD or YYYY-MM-DD HH:mm(:ss) without a timezone designator.
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
     if (m) {
       return new Date(
@@ -70,10 +56,6 @@ const Utils = (function() {
     return isNaN(d.getTime()) ? null : d;
   }
 
-  /**
-   * อนุญาตเฉพาะลิงก์ http(s) หรือ path ภายใน — กัน javascript:/data: ที่ฝังมากับข้อมูลใน Sheet
-   * คืนค่า "#" ถ้าไม่ปลอดภัย
-   */
   function safeUrl(url) {
     const s = String(url || "").trim();
     if (!s) return "";
@@ -116,9 +98,6 @@ const Utils = (function() {
            d.getDate() === today.getDate();
   }
 
-  // ==============================================================================
-  // YOUTUBE HELPER FUNCTIONS
-  // ==============================================================================
   function extractYouTubeId(url) {
     if (!url) return "";
     const str = String(url).trim();
@@ -151,8 +130,6 @@ const Utils = (function() {
     if (!url || typeof url !== "string") return "";
     const trimmed = url.trim();
     if (!trimmed) return "";
-
-    // Match Google Drive file ID from all known URL patterns
     const driveMatch = trimmed.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=|thumbnail\?id=)|lh3\.googleusercontent\.com\/d\/)([a-zA-Z0-9_-]{20,})/i);
     if (driveMatch && driveMatch[1]) {
       const fileId = driveMatch[1];
@@ -230,7 +207,6 @@ const Utils = (function() {
         canvas.height = height;
 
         const ctx = canvas.getContext("2d");
-        // พื้นหลังขาว: PNG โปร่งใสเมื่อแปลงเป็น JPEG จะไม่กลายเป็นสีดำ
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
         ctx.imageSmoothingEnabled = true;
@@ -260,9 +236,6 @@ const Utils = (function() {
     });
   }
 
-  // ==============================================================================
-  // SKELETON SCREEN GENERATORS
-  // ==============================================================================
   function renderNewsSkeletons(count = 6) {
     let html = "";
     for (let i = 0; i < count; i++) {
@@ -340,9 +313,6 @@ const Utils = (function() {
     return html;
   }
 
-  // ==============================================================================
-  // INTERACTIVE COUNTER ANIMATION
-  // ==============================================================================
   function animateCounter(element, targetValue, duration = 800) {
     if (!element) return;
     const start = 0;
@@ -357,7 +327,6 @@ const Utils = (function() {
     function update(currentTime) {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease Out Quad
       const easeProgress = 1 - (1 - progress) * (1 - progress);
       const current = Math.floor(start + (end - start) * easeProgress);
 
@@ -373,9 +342,6 @@ const Utils = (function() {
     requestAnimationFrame(update);
   }
 
-  // ==============================================================================
-  // TOAST NOTIFICATION WITH PROGRESS BAR
-  // ==============================================================================
   function showToast(message, type = "info", duration = 3500) {
     let container = document.getElementById("toast-container");
     if (!container) {
@@ -425,9 +391,6 @@ const Utils = (function() {
     }, 250);
   }
 
-  // ==============================================================================
-  // MODAL MANAGER WITH SPRING ANIMATION
-  // ==============================================================================
   function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
@@ -456,9 +419,6 @@ const Utils = (function() {
     });
   }
 
-  // ==============================================================================
-  // BUTTON RIPPLE EFFECT & BACK TO TOP FLOATING BUTTON
-  // ==============================================================================
   function setupRippleEffect() {
     document.addEventListener("click", (e) => {
       const btn = e.target.closest(".btn");
@@ -531,6 +491,14 @@ const Utils = (function() {
         link.addEventListener("click", () => {
           navLinks.classList.remove("show");
         });
+      });
+
+      // ปิดเมนูเมื่อหมุนจอ/ขยายหน้าต่างจนเป็นเมนูเต็ม หรือกด Esc
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 1280) navLinks.classList.remove("show");
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") navLinks.classList.remove("show");
       });
     }
 

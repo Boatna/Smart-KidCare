@@ -1,218 +1,390 @@
-/**
- * ==============================================================================
- * PROGRESSIVE WEB APP (PWA) INSTALL & NOTIFICATION CONTROLLER
- * ==============================================================================
- * - ลงทะเบียน Service Worker, ปุ่ม/แบนเนอร์ติดตั้งแอป, วิธีติดตั้งบน iOS
- * - ขอสิทธิ์แจ้งเตือนผ่านปุ่มที่ผู้ใช้กดเอง (user gesture) เฉพาะเมื่อเปิดจากแอปที่ติดตั้งแล้ว
- * - ตรวจข่าวใหม่ตอนเปิดแอป/กลับมาที่แอป/ทุก 5 นาที แล้วแจ้งเตือนในเครื่อง
- *   (ถ้าต้องการ push ตอนปิดแอป ต้องต่อ OneSignal/FCM เพิ่ม — ดูคำอธิบายในแชท)
- */
-
-const PWA = (function() {
-  let deferredPrompt = null;
-  const isIOS = (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+const PWA = (function () {
+  "use strict";
+  const ua = navigator.userAgent || "";
+  const isIOS = (/iPad|iPhone|iPod/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) && !window.MSStream;
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+  const isInAppBrowser = /\bLine\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)/i.test(ua);
+  const isLoginPage = /login\.html$/i.test(window.location.pathname);
 
-  const SEEN_NEWS_KEY = "emp_seen_news_ids";
-  const PROMO_UNTIL_KEY = "notif_promo_until";
+  const KEYS = {
+    install: "pwa_install_prompt_v2",
+    notif: "pwa_notif_prompt_v2",
+    seenNews: "emp_seen_news_ids",
+    sessionShown: "pwa_prompt_shown_session"
+  };
+  const DAY = 24 * 60 * 60 * 1000;
+  const INSTALL_SNOOZE_DAYS = [7, 30, 90];
+  const NOTIF_SNOOZE_DAYS = [3, 14, 60];
   const NEWS_POLL_MS = 5 * 60 * 1000;
+
+  let deferredPrompt = null;
+  let activePrompt = null;
+  let evalTimer = null;
+
+  function toast(message, type, duration) {
+    if (typeof Utils !== "undefined" && Utils.showToast) {
+      Utils.showToast(message, type || "info", duration || 4000);
+    }
+  }
+
+  function readState(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}") || {}; } catch (e) { return {}; }
+  }
+
+  function writeState(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+
+  function isSnoozed(key) {
+    return Number(readState(key).until || 0) > Date.now();
+  }
+
+  function snooze(key, schedule) {
+    const count = Number(readState(key).count || 0) + 1;
+    const days = schedule[Math.min(count - 1, schedule.length - 1)];
+    writeState(key, { count: count, until: Date.now() + days * DAY });
+  }
+
+  function neverAskAgain(key) {
+    writeState(key, { count: 99, until: Date.now() + 3650 * DAY });
+  }
+
+  function shownThisSession() {
+    try { return sessionStorage.getItem(KEYS.sessionShown) === "1"; } catch (e) { return false; }
+  }
+
+  function markShownThisSession() {
+    try { sessionStorage.setItem(KEYS.sessionShown, "1"); } catch (e) {}
+  }
+
+  function isLoggedIn() {
+    return typeof Auth === "undefined" ? true : Auth.isLoggedIn();
+  }
 
   function init() {
     registerServiceWorker();
     setupInstallListeners();
-    injectInstallUI();
+    injectInstallMenuItem();
     setupNotificationButton();
-    setTimeout(showNotificationPromo, 1500);
+    updateInstallEntryPoints();
+    scheduleEvaluate();
     startNewsWatcher();
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") scheduleEvaluate();
+    });
   }
 
   function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      const doRegister = () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then((reg) => {
-            console.log('ServiceWorker registered with scope:', reg.scope);
-          })
-          .catch((err) => {
-            console.warn('ServiceWorker registration failed:', err);
-          });
-      };
+    if (!("serviceWorker" in navigator)) return;
+    const doRegister = () => {
+      navigator.serviceWorker.register("./sw.js")
+        .then((reg) => console.log("ServiceWorker registered with scope:", reg.scope))
+        .catch((err) => console.warn("ServiceWorker registration failed:", err));
+    };
+    if (document.readyState === "complete") doRegister();
+    else window.addEventListener("load", doRegister);
+  }
 
-      if (document.readyState === 'complete') {
-        doRegister();
-      } else {
-        window.addEventListener('load', doRegister);
-      }
+  function hidePrompt() {
+    const el = document.getElementById("pwaPrompt");
+    if (el) el.remove();
+    document.body.classList.remove("has-pwa-prompt");
+    activePrompt = null;
+  }
+
+  function showPrompt(cfg) {
+    hidePrompt();
+
+    const el = document.createElement("div");
+    el.id = "pwaPrompt";
+    el.className = "pwa-prompt";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-label", cfg.title);
+    el.innerHTML = `
+      <button type="button" class="pwa-prompt-close" aria-label="ปิด">&times;</button>
+      <div class="pwa-prompt-head">
+        <img src="assets/icons/app-icon.png" alt="" class="pwa-prompt-icon">
+        <div class="pwa-prompt-body">
+          <div class="pwa-prompt-title">${cfg.title}</div>
+          <div class="pwa-prompt-text">${cfg.text}</div>
+        </div>
+      </div>
+      <div class="pwa-prompt-actions">
+        <button type="button" class="btn btn-secondary btn-sm" data-act="later">ไว้ทีหลัง</button>
+        <button type="button" class="btn btn-primary btn-sm" data-act="primary">${cfg.primaryLabel}</button>
+      </div>
+    `;
+
+    document.body.appendChild(el);
+    document.body.classList.add("has-pwa-prompt");
+    activePrompt = cfg.type;
+    markShownThisSession();
+
+    const later = () => {
+      snooze(cfg.key, cfg.schedule);
+      hidePrompt();
+    };
+    el.querySelector(".pwa-prompt-close").addEventListener("click", later);
+    el.querySelector('[data-act="later"]').addEventListener("click", later);
+    el.querySelector('[data-act="primary"]').addEventListener("click", () => {
+      hidePrompt();
+      cfg.onPrimary();
+    });
+  }
+
+  function scheduleEvaluate() {
+    clearTimeout(evalTimer);
+    const minWait = isStandalone ? 3000 : 5000;
+    const delay = Math.max(minWait - Math.round(performance.now()), 300);
+    evalTimer = setTimeout(evaluatePrompts, delay);
+  }
+
+  function evaluatePrompts() {
+    if (activePrompt || isLoginPage) return;
+    if (document.visibilityState !== "visible") return;
+    if (document.querySelector(".modal-backdrop.show")) return;
+    if (shownThisSession()) return;
+    if (!isStandalone && !isSnoozed(KEYS.install)) {
+      if (deferredPrompt) return showInstallPrompt();
+      if (isInAppBrowser) return showInAppBrowserPrompt();
+      if (isIOS) return showIOSPrompt();
     }
+
+    if (canPromptNotifications()) showNotificationPrompt();
   }
 
   function setupInstallListeners() {
-    window.addEventListener('beforeinstallprompt', (e) => {
+    window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      showInstallPromotion();
+      updateInstallEntryPoints();
+      scheduleEvaluate();
     });
 
-    window.addEventListener('appinstalled', () => {
+    window.addEventListener("appinstalled", () => {
       deferredPrompt = null;
-      hideInstallPromotion();
-      if (typeof Utils !== 'undefined' && Utils.showToast) {
-        Utils.showToast("🎉 ติดตั้งแอปพลิเคชันลงบนเครื่องเรียบร้อยแล้ว! เปิดแอปจากหน้าจอหลักเพื่อเปิดรับการแจ้งเตือนข่าวใหม่", "success", 6000);
-      }
-      // หมายเหตุ: ไม่ขอสิทธิ์แจ้งเตือนอัตโนมัติที่นี่ เพราะ iOS/Chrome ต้องการให้ผู้ใช้กดปุ่มเอง
-      // แบนเนอร์ขอสิทธิ์จะแสดงเมื่อผู้ใช้เปิดแอปที่ติดตั้งแล้ว (showNotificationPromo)
+      neverAskAgain(KEYS.install);
+      hidePrompt();
+      updateInstallEntryPoints();
+      toast("🎉 ติดตั้งเรียบร้อย เปิดจากหน้าจอหลักได้เลย", "success", 5000);
     });
-
-    if (isIOS && !isStandalone) {
-      setTimeout(() => {
-        showIOSInstallPromotion();
-      }, 2000);
-    }
   }
 
-  function injectInstallUI() {
-    if (!document.getElementById('pwaInstallBanner') && !isStandalone) {
-      const banner = document.createElement('div');
-      banner.id = 'pwaInstallBanner';
-      banner.className = 'pwa-install-banner animate-slide-up';
-      banner.style.display = 'none';
-
-      banner.innerHTML = `
-        <div class="pwa-banner-content">
-          <img src="assets/icons/app-icon.png" alt="BW App Icon" class="pwa-banner-icon">
-          <div class="pwa-banner-text">
-            <strong>ติดตั้ง Employee Portal</strong>
-            <span>เข้าถึงได้รวดเร็วแบบแอปบนมือถือและ Desktop</span>
-          </div>
-        </div>
-        <div class="pwa-banner-actions">
-          <button id="pwaBtnDismiss" class="btn btn-secondary btn-sm" aria-label="Close">ไว้ทีหลัง</button>
-          <button id="pwaBtnInstall" class="btn btn-primary btn-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            ติดตั้งเลย
-          </button>
-        </div>
-      `;
-
-      document.body.appendChild(banner);
-
-      document.getElementById('pwaBtnInstall').addEventListener('click', promptInstall);
-      document.getElementById('pwaBtnDismiss').addEventListener('click', () => {
-        banner.style.display = 'none';
-        try { sessionStorage.setItem('pwa_prompt_dismissed', 'true'); } catch (e) {}
-      });
-    }
-
-    if (!document.getElementById('iosInstallModal')) {
-      const iosModal = document.createElement('div');
-      iosModal.id = 'iosInstallModal';
-      iosModal.className = 'modal-backdrop';
-      iosModal.innerHTML = `
-        <div class="modal-content" style="max-width: 440px; text-align: center;">
-          <div class="modal-header">
-            <h3 class="modal-title">วิธีติดตั้งบน iPhone / iPad</h3>
-            <button class="modal-close" id="btnDismissIosModal">✕</button>
-          </div>
-          <div class="modal-body" style="padding: 1.5rem;">
-            <img src="assets/icons/app-icon.png" alt="App Icon" style="width: 80px; height: 80px; border-radius: 18px; margin: 0 auto 1.25rem auto; box-shadow: 0 8px 16px rgba(0,102,204,0.25);">
-            <p style="font-size: 1rem; color: var(--text-primary); margin-bottom: 1.25rem;">
-              ติดตั้ง <strong>Employee Portal</strong> บนหน้าจอโฮมเพื่อการใช้งานที่สะดวกเหมือนแอปพลิเคชันทั่วไป:
-            </p>
-            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; text-align: left; line-height: 1.8; font-size: 0.95rem;">
-              1. แตะปุ่ม <strong>แชร์ (Share)</strong> <span style="font-size: 1.2rem;">📤</span> ด้านล่างของ Safari<br>
-              2. เลื่อนลงแล้วเลือก <strong>"เพิ่มไปยังหน้าจอโฮม" (Add to Home Screen)</strong> ➕<br>
-              3. กด <strong>"เพิ่ม" (Add)</strong> มุมบนขวา<br>
-              4. เปิดแอปจากหน้าจอโฮม แล้วกด <strong>"เปิดการแจ้งเตือน"</strong> เพื่อรับข่าวใหม่
-            </div>
-          </div>
-          <div class="modal-footer" style="justify-content: center;">
-            <button class="btn btn-primary" id="btnOkIosModal" style="width: 100%;">เข้าใจแล้ว</button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(iosModal);
-
-      const closeIosModal = () => iosModal.classList.remove('show');
-      document.getElementById('btnDismissIosModal').addEventListener('click', closeIosModal);
-      document.getElementById('btnOkIosModal').addEventListener('click', closeIosModal);
-    }
+  function showInstallPrompt() {
+    showPrompt({
+      type: "install",
+      key: KEYS.install,
+      schedule: INSTALL_SNOOZE_DAYS,
+      title: "ติดตั้ง Employee Portal",
+      text: "เปิดใช้ได้เร็วจากหน้าจอหลัก เหมือนแอปทั่วไป",
+      primaryLabel: "ติดตั้ง",
+      onPrimary: promptInstall
+    });
   }
 
-  function showInstallPromotion() {
-    if (sessionStorage.getItem('pwa_prompt_dismissed') === 'true') return;
-
-    const banner = document.getElementById('pwaInstallBanner');
-    if (banner) banner.style.display = 'flex';
-
-    const navBtn = document.getElementById('navBtnInstallPWA');
-    if (navBtn) navBtn.style.display = 'inline-flex';
-  }
-
-  function hideInstallPromotion() {
-    const banner = document.getElementById('pwaInstallBanner');
-    if (banner) banner.style.display = 'none';
-
-    const navBtn = document.getElementById('navBtnInstallPWA');
-    if (navBtn) navBtn.style.display = 'none';
-  }
-
-  function showIOSInstallPromotion() {
-    if (sessionStorage.getItem('pwa_prompt_dismissed') === 'true') return;
-    const banner = document.getElementById('pwaInstallBanner');
-    if (banner) {
-      banner.style.display = 'flex';
-      const btn = document.getElementById('pwaBtnInstall');
-      if (btn) {
-        btn.innerHTML = `วิธีติดตั้ง ↗`;
-        btn.onclick = () => {
-          const modal = document.getElementById('iosInstallModal');
-          if (modal) modal.classList.add('show');
-        };
+  function showIOSPrompt() {
+    showPrompt({
+      type: "ios",
+      key: KEYS.install,
+      schedule: INSTALL_SNOOZE_DAYS,
+      title: "เพิ่มลงหน้าจอโฮม",
+      text: "ใช้งานได้สะดวกเหมือนแอป และเปิดรับแจ้งเตือนข่าวได้",
+      primaryLabel: "ดูวิธี",
+      onPrimary: () => {
+        snooze(KEYS.install, INSTALL_SNOOZE_DAYS);
+        openGuide("ios");
       }
-    }
+    });
+  }
+
+  function showInAppBrowserPrompt() {
+    showPrompt({
+      type: "inapp",
+      key: KEYS.install,
+      schedule: INSTALL_SNOOZE_DAYS,
+      title: "เปิดด้วย Safari หรือ Chrome",
+      text: "เบราว์เซอร์ในแอป LINE/Facebook ติดตั้งแอปไม่ได้",
+      primaryLabel: "ดูวิธี",
+      onPrimary: () => {
+        snooze(KEYS.install, INSTALL_SNOOZE_DAYS);
+        openGuide("inapp");
+      }
+    });
   }
 
   async function promptInstall() {
-    if (!deferredPrompt) {
-      if (isIOS) {
-        const modal = document.getElementById('iosInstallModal');
-        if (modal) modal.classList.add('show');
-        return;
-      }
-      if (typeof Utils !== 'undefined' && Utils.showToast) {
-        Utils.showToast("ระบบพร้อมใช้งานแล้วบนเบราว์เซอร์นี้ หรือคุณได้ติดตั้งแอปไว้แล้ว", "info");
+    if (isStandalone) {
+      toast("แอปนี้ติดตั้งไว้บนเครื่องแล้ว", "info");
+      return;
+    }
+
+    if (deferredPrompt) {
+      const promptEvent = deferredPrompt;
+      deferredPrompt = null;
+      updateInstallEntryPoints();
+      try {
+        promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice && choice.outcome !== "accepted") {
+          snooze(KEYS.install, INSTALL_SNOOZE_DAYS);
+        }
+      } catch (err) {
+        console.warn("Install prompt failed:", err);
       }
       return;
     }
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to install prompt: ${outcome}`);
-    if (outcome === 'accepted') {
-      deferredPrompt = null;
-      hideInstallPromotion();
+    if (isInAppBrowser) return openGuide("inapp");
+    if (isIOS) return openGuide("ios");
+
+    toast("ติดตั้งได้จากเมนูของเบราว์เซอร์ (⋮ แล้วเลือก ติดตั้งแอป / เพิ่มลงหน้าจอหลัก)", "info", 6000);
+  }
+
+  function injectInstallMenuItem() {
+    const navLinks = document.getElementById("navLinks");
+    if (!navLinks || document.getElementById("navInstallItem") || isStandalone) return;
+
+    const li = document.createElement("li");
+    li.id = "navInstallItem";
+    li.className = "nav-install-item";
+    li.innerHTML = '<a href="#" class="nav-link">📲 ติดตั้งแอปบนเครื่อง</a>';
+    navLinks.appendChild(li);
+
+    li.querySelector("a").addEventListener("click", (e) => {
+      e.preventDefault();
+      navLinks.classList.remove("show");
+      promptInstall();
+    });
+  }
+
+  function updateInstallEntryPoints() {
+    const navBtn = document.getElementById("navBtnInstallPWA");
+    if (navBtn) navBtn.style.display = (!isStandalone && deferredPrompt) ? "inline-flex" : "none";
+
+    const item = document.getElementById("navInstallItem");
+    if (item) {
+      const available = !isStandalone && (Boolean(deferredPrompt) || isIOS || isInAppBrowser);
+      item.classList.toggle("is-available", available);
     }
   }
 
-  // ==============================================================================
-  // PUSH / LOCAL NOTIFICATION MANAGEMENT
-  // ==============================================================================
+  function closeGuide() {
+    const modal = document.getElementById("pwaGuideModal");
+    if (!modal) return;
+    modal.classList.remove("show");
+    document.body.style.overflow = "";
+    setTimeout(() => modal.remove(), 250);
+  }
+
+  function openGuide(kind) {
+    const old = document.getElementById("pwaGuideModal");
+    if (old) old.remove();
+
+    const isInApp = kind === "inapp";
+    const title = isInApp ? "เปิดด้วยเบราว์เซอร์เพื่อติดตั้ง" : "ติดตั้งบน iPhone / iPad";
+    const intro = isInApp
+      ? "เบราว์เซอร์ในแอป LINE / Facebook ติดตั้งแอปไม่ได้ ให้เปิดหน้านี้ด้วย Safari หรือ Chrome ก่อน"
+      : "ทำตามขั้นตอนนี้ใน Safari เพื่อเพิ่ม Employee Portal ลงหน้าจอโฮม";
+    const steps = isInApp
+      ? [
+          "แตะปุ่ม <strong>⋯</strong> หรือ <strong>⋮</strong> ที่มุมจอ",
+          "เลือก <strong>เปิดในเบราว์เซอร์</strong> (Open in browser)",
+          "ในเบราว์เซอร์ที่เปิดขึ้น ให้ติดตั้งตามข้อความที่แสดง"
+        ]
+      : [
+          "แตะปุ่ม <strong>แชร์</strong> 📤 (ด้านล่างของ Safari หรือมุมบนขวาบน iPad)",
+          "เลื่อนลงแล้วเลือก <strong>เพิ่มไปยังหน้าจอโฮม</strong>",
+          "กด <strong>เพิ่ม</strong> แล้วเปิดแอปจากหน้าจอโฮม จะเปิดรับแจ้งเตือนข่าวได้ (iOS 16.4 ขึ้นไป)"
+        ];
+
+    const modal = document.createElement("div");
+    modal.id = "pwaGuideModal";
+    modal.className = "modal-backdrop";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 440px;">
+        <div class="modal-header">
+          <h3 class="modal-title">${title}</h3>
+          <button type="button" class="modal-close" data-act="close" aria-label="ปิด">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="pwa-guide-intro">${intro}</p>
+          <ol class="pwa-steps">
+            ${steps.map((s, i) => `<li><span class="pwa-step-num">${i + 1}</span><span>${s}</span></li>`).join("")}
+          </ol>
+        </div>
+        <div class="modal-footer">
+          ${isInApp ? '<button type="button" class="btn btn-secondary" data-act="copy">คัดลอกลิงก์</button>' : ""}
+          <button type="button" class="btn btn-primary" data-act="close">เข้าใจแล้ว</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => modal.classList.add("show"));
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeGuide();
+    });
+    modal.querySelectorAll('[data-act="close"]').forEach((btn) => btn.addEventListener("click", closeGuide));
+
+    const copyBtn = modal.querySelector('[data-act="copy"]');
+    if (copyBtn) {
+      copyBtn.addEventListener("click", async () => {
+        const link = window.location.href.split("#")[0];
+        try {
+          await navigator.clipboard.writeText(link);
+          toast("คัดลอกลิงก์แล้ว นำไปเปิดใน Safari หรือ Chrome ได้เลย", "success");
+        } catch (err) {
+          toast("คัดลอกอัตโนมัติไม่ได้ กรุณากดค้างที่แถบที่อยู่เพื่อคัดลอก", "warning", 5000);
+        }
+      });
+    }
+
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        closeGuide();
+        document.removeEventListener("keydown", onKey);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+  }
+
   function isNotificationSupported() {
     return ("Notification" in window) && ("serviceWorker" in navigator);
   }
 
   function getNotificationPermission() {
-    if (!isNotificationSupported()) return "unsupported";
-    return Notification.permission; // "default", "granted", "denied"
+    return isNotificationSupported() ? Notification.permission : "unsupported";
   }
 
-  /** ต้องเรียกจากการกดปุ่มของผู้ใช้เท่านั้น (iOS/Android ถึงจะแสดงหน้าต่างขอสิทธิ์) */
+  function canPromptNotifications() {
+    if (!isNotificationSupported()) return false;
+    if (Notification.permission !== "default") return false;
+    if (!isStandalone) return false;
+    if (!isLoggedIn()) return false;
+    return !isSnoozed(KEYS.notif);
+  }
+
+  function showNotificationPrompt() {
+    showPrompt({
+      type: "notif",
+      key: KEYS.notif,
+      schedule: NOTIF_SNOOZE_DAYS,
+      title: "รับแจ้งเตือนข่าวใหม่",
+      text: "รู้ทันทีเมื่อมีประกาศสำคัญจากบริษัท",
+      primaryLabel: "เปิดการแจ้งเตือน",
+      onPrimary: requestNotificationPermission
+    });
+  }
+
   async function requestNotificationPermission() {
     if (!isNotificationSupported()) {
-      if (typeof Utils !== "undefined" && Utils.showToast) {
-        Utils.showToast("อุปกรณ์นี้ไม่รองรับการแจ้งเตือน (บน iPhone ต้องติดตั้งแอปลงหน้าจอโฮมก่อน)", "warning", 5000);
-      }
+      toast("อุปกรณ์นี้ไม่รองรับการแจ้งเตือน (บน iPhone ต้องติดตั้งแอปลงหน้าจอโฮมก่อน)", "warning", 5000);
       return "unsupported";
     }
 
@@ -221,24 +393,14 @@ const PWA = (function() {
       updateNotificationButtonUI(permission);
 
       if (permission === "granted") {
-        if (typeof Utils !== "undefined" && Utils.showToast) {
-          Utils.showToast("🔔 เปิดรับการแจ้งเตือนข่าวสารใหม่เรียบร้อยแล้ว!", "success", 4000);
-        }
-
-        sendLocalTestNotification(
-          "🔔 เปิดการแจ้งเตือนสำเร็จ!",
-          "คุณจะได้รับการแจ้งเตือนเมื่อมีข่าวสารและประกาศใหม่จาก Employee Portal"
-        );
-
-        // จำรายการข่าวปัจจุบันไว้ จะได้แจ้งเฉพาะข่าวที่ใหม่กว่านี้
+        toast("🔔 เปิดการแจ้งเตือนข่าวใหม่แล้ว", "success", 3500);
         checkNewNewsAndNotify();
         subscribeUserToPush();
       } else if (permission === "denied") {
-        if (typeof Utils !== "undefined" && Utils.showToast) {
-          Utils.showToast("คุณได้ปฏิเสธการแจ้งเตือน (สามารถเปิดใหม่ได้ในการตั้งค่าเบราว์เซอร์/ระบบ)", "warning", 4500);
-        }
+        toast("การแจ้งเตือนถูกปิดไว้ เปิดใหม่ได้ในการตั้งค่าของเบราว์เซอร์/ระบบ", "warning", 5000);
+      } else {
+        snooze(KEYS.notif, NOTIF_SNOOZE_DAYS);
       }
-
       return permission;
     } catch (err) {
       console.warn("Failed to request notification permission:", err);
@@ -264,8 +426,6 @@ const PWA = (function() {
 
       if ("pushManager" in reg) {
         subscription = await reg.pushManager.getSubscription();
-
-        // ต้องมี VAPID Public Key ใน CONFIG.VAPID_PUBLIC_KEY จึงจะสมัคร Web Push ได้จริง
         const vapidKey = (typeof CONFIG !== "undefined" && CONFIG.VAPID_PUBLIC_KEY) || null;
         if (!subscription && vapidKey) {
           try {
@@ -293,21 +453,18 @@ const PWA = (function() {
     }
   }
 
-  async function sendLocalTestNotification(title, body, url) {
-    if (!isNotificationSupported() || Notification.permission !== "granted") {
-      return;
-    }
+  async function showSystemNotification(title, body, url, tag) {
+    if (!isNotificationSupported() || Notification.permission !== "granted") return;
 
     try {
       const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification(title || "📢 ทดสอบการแจ้งเตือน", {
-        body: body || "นี่คือตัวอย่างการแจ้งเตือนข่าวสารจาก Employee Portal",
+      await reg.showNotification(title, {
+        body: body || "",
         icon: "./assets/icons/icon-192.png",
         badge: "./assets/icons/favicon-32.png",
+        tag: tag || "emp-portal-news",
         vibrate: [100, 50, 100],
-        data: {
-          url: url || "./index.html"
-        }
+        data: { url: url || "./index.html" }
       });
     } catch (err) {
       console.warn("Could not show notification:", err);
@@ -324,29 +481,20 @@ const PWA = (function() {
     btn.id = "btnNotificationNav";
     btn.className = "btn-notification-nav";
     btn.type = "button";
-    btn.title = "ตั้งค่าการแจ้งเตือนข่าวสาร";
-
-    const currentPerm = getNotificationPermission();
-    btn.innerHTML = currentPerm === "granted"
-      ? `<span>🔔</span><span class="notification-status-dot active"></span>`
-      : `<span>🔕</span><span class="notification-status-dot"></span>`;
+    btn.setAttribute("aria-label", "การแจ้งเตือนข่าวสาร");
+    navUser.parentNode.insertBefore(btn, navUser);
+    updateNotificationButtonUI(Notification.permission);
 
     btn.addEventListener("click", async () => {
-      if (Notification.permission === "granted") {
-        if (typeof Utils !== "undefined" && Utils.showToast) {
-          Utils.showToast("🔔 การแจ้งเตือนเปิดใช้งานอยู่แล้วบนเครื่องนี้ (กำลังส่งการแจ้งเตือนทดสอบ...)", "info", 3500);
-        }
-        sendLocalTestNotification("🔔 ระบบแจ้งเตือนพร้อมใช้งาน!", "คุณจะได้รับการแจ้งเตือนเมื่อมีข่าวสารใหม่ในองค์กร");
-      } else if (Notification.permission === "denied") {
-        if (typeof Utils !== "undefined" && Utils.showToast) {
-          Utils.showToast("การแจ้งเตือนถูกปิดไว้ กรุณาเปิดในการตั้งค่าของเบราว์เซอร์/แอปบนเครื่อง", "warning", 5000);
-        }
+      const perm = Notification.permission;
+      if (perm === "granted") {
+        toast("🔔 เปิดรับแจ้งเตือนอยู่แล้ว จะแจ้งเมื่อมีข่าวใหม่", "info", 3500);
+      } else if (perm === "denied") {
+        toast("การแจ้งเตือนถูกปิดไว้ กรุณาเปิดในการตั้งค่าของเบราว์เซอร์/แอปบนเครื่อง", "warning", 5000);
       } else {
         await requestNotificationPermission();
       }
     });
-
-    navUser.parentNode.insertBefore(btn, navUser);
   }
 
   function updateNotificationButtonUI(permission) {
@@ -354,57 +502,31 @@ const PWA = (function() {
     if (!btn) return;
 
     if (permission === "granted") {
-      btn.innerHTML = `<span>🔔</span><span class="notification-status-dot active"></span>`;
-      btn.title = "เปิดรับการแจ้งเตือนแล้ว (กดเพื่อทดสอบส่งแจ้งเตือน)";
+      btn.innerHTML = '<span>🔔</span><span class="notification-status-dot active"></span>';
+      btn.title = "เปิดรับแจ้งเตือนข่าวใหม่อยู่";
     } else {
-      btn.innerHTML = `<span>🔕</span><span class="notification-status-dot"></span>`;
-      btn.title = "กดเพื่อเปิดรับการแจ้งเตือนข่าวสารใหม่";
+      btn.innerHTML = '<span>🔕</span><span class="notification-status-dot"></span>';
+      btn.title = permission === "denied"
+        ? "การแจ้งเตือนถูกปิดไว้ในตั้งค่าเครื่อง"
+        : "กดเพื่อเปิดรับแจ้งเตือนข่าวใหม่";
     }
   }
 
-  /**
-   * แบนเนอร์ชวนเปิดแจ้งเตือน: แสดงเฉพาะเมื่อ
-   *  - เปิดจากแอปที่ติดตั้งแล้ว (standalone)  - ล็อกอินแล้ว  - ยังไม่ได้ตอบสิทธิ์ (default)
-   * ผู้ใช้ต้องกดปุ่มเอง (user gesture) จึงจะขอสิทธิ์ได้ทั้ง iOS และ Android
-   */
-  function showNotificationPromo() {
-    if (!isNotificationSupported() || Notification.permission !== "default") return;
-    if (!isStandalone) return;
-    if (typeof Auth !== "undefined" && !Auth.isLoggedIn()) return;
-    try {
-      if (Number(localStorage.getItem(PROMO_UNTIL_KEY) || 0) > Date.now()) return;
-    } catch (e) {}
-    if (document.getElementById("notifPromoBanner")) return;
+  function announceNews(fresh) {
+    const single = fresh.length === 1;
+    const title = single ? "📢 ข่าวใหม่" : "📢 มีข่าวใหม่ " + fresh.length + " รายการ";
+    const body = single
+      ? fresh[0].title
+      : fresh.slice(0, 3).map((n) => "• " + n.title).join("\n");
+    const url = single ? "./index.html?newsId=" + encodeURIComponent(fresh[0].id) : "./index.html";
 
-    const banner = document.createElement("div");
-    banner.id = "notifPromoBanner";
-    banner.className = "pwa-install-banner animate-slide-up";
-    banner.innerHTML = `
-      <div class="pwa-banner-content">
-        <img src="assets/icons/app-icon.png" alt="" class="pwa-banner-icon">
-        <div class="pwa-banner-text">
-          <strong>เปิดรับแจ้งเตือนข่าวใหม่</strong>
-          <span>รู้ทันทีเมื่อมีประกาศสำคัญจากบริษัท</span>
-        </div>
-      </div>
-      <div class="pwa-banner-actions">
-        <button type="button" class="btn btn-secondary btn-sm" id="notifPromoLater">ไว้ทีหลัง</button>
-        <button type="button" class="btn btn-primary btn-sm" id="notifPromoAllow">🔔 เปิดการแจ้งเตือน</button>
-      </div>
-    `;
-    document.body.appendChild(banner);
-
-    document.getElementById("notifPromoAllow").addEventListener("click", async () => {
-      banner.remove();
-      await requestNotificationPermission();
-    });
-    document.getElementById("notifPromoLater").addEventListener("click", () => {
-      banner.remove();
-      try { localStorage.setItem(PROMO_UNTIL_KEY, String(Date.now() + 3 * 24 * 60 * 60 * 1000)); } catch (e) {}
-    });
+    if (document.visibilityState === "visible") {
+      toast(single ? "📢 ข่าวใหม่: " + fresh[0].title : title, "info", 6000);
+    } else {
+      showSystemNotification(title, body, url, "emp-portal-news");
+    }
   }
 
-  /** เช็กข่าวใหม่แล้วแจ้งเตือนในเครื่อง (ทำงานเมื่อแอปเปิดอยู่/กลับมาที่แอป) */
   async function checkNewNewsAndNotify() {
     if (!isNotificationSupported() || Notification.permission !== "granted") return;
     if (typeof API === "undefined") return;
@@ -413,29 +535,20 @@ const PWA = (function() {
       const res = await API.get("getNews");
       if (!res || !res.success || !Array.isArray(res.data)) return;
 
-      const ids = res.data.map(n => String(n.id));
+      const ids = res.data.map((n) => String(n.id));
       let seen = null;
-      try { seen = JSON.parse(localStorage.getItem(SEEN_NEWS_KEY) || "null"); } catch (e) {}
-
-      // เปิดครั้งแรก: จดจำข่าวทั้งหมดไว้เฉยๆ ไม่ยิงแจ้งเตือนรัว
+      try { seen = JSON.parse(localStorage.getItem(KEYS.seenNews) || "null"); } catch (e) {}
       if (!Array.isArray(seen)) {
-        localStorage.setItem(SEEN_NEWS_KEY, JSON.stringify(ids.slice(0, 200)));
+        try { localStorage.setItem(KEYS.seenNews, JSON.stringify(ids.slice(0, 200))); } catch (e) {}
         return;
       }
 
-      const fresh = res.data.filter(n => seen.indexOf(String(n.id)) === -1).slice(0, 3);
+      const fresh = res.data.filter((n) => seen.indexOf(String(n.id)) === -1);
       const merged = ids.concat(seen).filter((v, i, a) => a.indexOf(v) === i).slice(0, 200);
-      localStorage.setItem(SEEN_NEWS_KEY, JSON.stringify(merged));
+      try { localStorage.setItem(KEYS.seenNews, JSON.stringify(merged)); } catch (e) {}
 
-      for (const n of fresh) {
-        await sendLocalTestNotification(
-          "📢 ข่าวใหม่: " + n.title,
-          String(n.detail || "").slice(0, 100),
-          "./index.html?newsId=" + encodeURIComponent(n.id)
-        );
-      }
+      if (fresh.length > 0) announceNews(fresh);
     } catch (e) {
-      // เงียบไว้ ไม่รบกวนผู้ใช้
     }
   }
 
@@ -454,11 +567,11 @@ const PWA = (function() {
     isNotificationSupported,
     getNotificationPermission,
     requestNotificationPermission,
-    sendLocalTestNotification,
+    sendLocalTestNotification: (title, body, url) => showSystemNotification(title, body, url),
     checkNewNewsAndNotify
   };
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   PWA.init();
 });

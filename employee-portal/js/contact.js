@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (currentUser) {
     if (empIdInput) {
       empIdInput.value = currentUser.employeeId;
-      empIdInput.readOnly = true; // Login แล้ว ไม่ให้แก้รหัสพนักงาน (Backend ใช้รหัสจาก Token อยู่แล้ว)
+      empIdInput.readOnly = true;
     }
     if (nameInput) nameInput.value = currentUser.name;
   }

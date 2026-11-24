@@ -154,9 +154,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ============================================================================
-  // NEWS IMAGE UPLOADER TO GOOGLE DRIVE (Drag & Drop + Auto Drive Storage)
-  // ============================================================================
   let selectedNewsImageFile = null;
   const newsImageDropzone = document.getElementById("newsImageDropzone");
   const newsImageFileInput = document.getElementById("newsImageFileInput");
@@ -193,7 +190,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (previewFileName) previewFileName.innerText = file.name;
       if (previewFileSize) previewFileSize.innerText = "กำลังปรับขนาดและบีบอัดรูปภาพ...";
 
-      // Client-side auto-compression before uploading to Google Drive
       const compressed = await Utils.compressImage(file, 1400, 0.82);
       selectedNewsImageFile = compressed;
 
@@ -306,7 +302,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("newsStatus").value = item.status || "Active";
     document.getElementById("newsDetail").value = item.detail;
 
-    // Show existing image in dropzone preview if present
     if (item.imageUrl && item.imageUrl.trim() !== "") {
       const displayUrl = Utils.formatDriveImageUrl(item.imageUrl);
       if (newsPreviewImg) {
@@ -336,7 +331,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const id = document.getElementById("newsId").value;
       let finalImageUrl = (newsImageUrlInput ? newsImageUrlInput.value : "").trim();
 
-      // If user selected a new file, upload compressed image to Google Drive
       if (selectedNewsImageFile && selectedNewsImageFile.dataUrl) {
         if (submitBtn) {
           submitBtn.disabled = true;
@@ -443,9 +437,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // ============================================================================
-  // 3. APPS MANAGEMENT (CRUD with Skeleton Screen)
-  // ============================================================================
   let adminAppsList = [];
   const appsTableBody = document.getElementById("appsTableBody");
   const searchAdminApps = document.getElementById("searchAdminApps");
@@ -612,9 +603,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // ============================================================================
-  // 4. USER MANAGEMENT (CRUD with Skeleton Screen)
-  // ============================================================================
   let adminUsersList = [];
   const usersTableBody = document.getElementById("usersTableBody");
   const searchAdminUsers = document.getElementById("searchAdminUsers");
@@ -769,7 +757,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Change PIN Modal
   window.openChangePinModal = function(empId, name) {
     const user = adminUsersList.find(u => String(u.employeeId) === String(empId));
     const displayName = user ? user.name : (name || empId);
@@ -821,9 +808,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // ============================================================================
-  // 5. CONTACT REQUESTS VIEWER (with Skeleton Screen)
-  // ============================================================================
   let adminContactsList = [];
   const contactsTableBody = document.getElementById("contactsTableBody");
 
@@ -843,7 +827,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // The "รีเฟรชรายการ" button uses an inline onclick, which can only see globals.
   window.loadAdminContacts = loadAdminContacts;
 
   function renderAdminContacts() {
@@ -892,9 +875,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // ============================================================================
-  // 6. LOGIN LOGS (Search, Filter, Sort, Pagination, Skeleton)
-  // ============================================================================
   let loginLogsRaw = [];
   let loginLogsCurrentPage = 1;
   const LOGS_PER_PAGE = 8;
@@ -938,7 +918,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return matchesSearch && matchesStatus;
     });
 
-    // Sort
     filtered.sort((a, b) => {
       const dateA = Utils.parseDate(a.dateTime);
       const dateB = Utils.parseDate(b.dateTime);
@@ -997,9 +976,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (filterLoginStatus) filterLoginStatus.addEventListener("change", () => { loginLogsCurrentPage = 1; renderLoginLogs(); });
   if (sortLoginLogs) sortLoginLogs.addEventListener("change", () => { renderLoginLogs(); });
 
-  // ============================================================================
-  // 7. ADMIN LOGS (Search, Filter, Sort, Pagination, Skeleton)
-  // ============================================================================
   let adminLogsRaw = [];
   let adminLogsCurrentPage = 1;
   const adminLogsTableBody = document.getElementById("adminLogsTableBody");

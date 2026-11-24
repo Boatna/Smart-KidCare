@@ -1,20 +1,26 @@
 const SPREADSHEET_ID = "1bePdeRo_aHmPK-764Kt_6ePXGra85_6h1KUIWwXRVsI";
 
+let _dbCache = null;
+
 function getDB() {
+  if (_dbCache) return _dbCache;
+
   // หากเป็น Container-bound Script ที่ผูกกับชีตอยู่แล้ว ให้ใช้ชีตปัจจุบันทันที
   try {
     const active = SpreadsheetApp.getActiveSpreadsheet();
-    if (active) return active;
+    if (active) { _dbCache = active; return _dbCache; }
   } catch (e) {}
 
   if (SPREADSHEET_ID && SPREADSHEET_ID.trim() !== "") {
     try {
-      return SpreadsheetApp.openById(SPREADSHEET_ID.trim());
+      _dbCache = SpreadsheetApp.openById(SPREADSHEET_ID.trim());
+      return _dbCache;
     } catch (err) {
       console.warn("Could not open spreadsheet by ID, falling back to active:", err);
     }
   }
-  return SpreadsheetApp.getActiveSpreadsheet();
+  _dbCache = SpreadsheetApp.getActiveSpreadsheet();
+  return _dbCache;
 }
 
 // ============================================================================
@@ -91,9 +97,58 @@ function authError_(code, message) {
   return { success: false, code: code, message: message };
 }
 
+function userCacheKey_(employeeId) {
+  return "uactive_" + cleanId(employeeId).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+}
+
+function clearUserActiveCache_(employeeId) {
+  try { CacheService.getScriptCache().remove(userCacheKey_(employeeId)); } catch (e) {}
+}
+
+// ตรวจว่าบัญชียัง Active อยู่ (แคช 2 นาที) เพื่อให้การ "ปิดการใช้งาน" มีผลกับ Token ที่ออกไปแล้วด้วย
+function isUserActive_(employeeId) {
+  const key = userCacheKey_(employeeId);
+  let cache = null;
+  try {
+    cache = CacheService.getScriptCache();
+    const hit = cache.get(key);
+    if (hit !== null) return hit === "1";
+  } catch (e) {}
+
+  let active = true; // ถ้าอ่านชีตไม่ได้ชั่วคราว ให้ผ่านไปก่อน ไม่ล็อกทุกคนออก
+  try {
+    const sheet = getDB().getSheetByName("Users");
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      if (data.length > 1) {
+        const headers = data[0].map(normalizeHeader_);
+        const empIdCol = headers.indexOf("employeeid") !== -1 ? headers.indexOf("employeeid") : 0;
+        const statusCol = headers.indexOf("status");
+        const target = cleanId(employeeId);
+        let found = false;
+        for (let i = 1; i < data.length; i++) {
+          const rowId = cleanId(data[i][empIdCol]);
+          const match = rowId.toLowerCase() === target.toLowerCase() ||
+            (/^\d+$/.test(rowId) && /^\d+$/.test(target) && rowId.replace(/^0+/, "") === target.replace(/^0+/, ""));
+          if (match) {
+            found = true;
+            active = statusCol === -1 ? true : String(data[i][statusCol] || "Active").trim().toLowerCase() === "active";
+            break;
+          }
+        }
+        if (!found) active = false;
+      }
+    }
+  } catch (e) {}
+
+  try { if (cache) cache.put(key, active ? "1" : "0", 120); } catch (e) {}
+  return active;
+}
+
 function requireSession_(token) {
   const id = verifySession_(token);
   if (!id) return { error: authError_("AUTH_REQUIRED", "เซสชันหมดอายุหรือยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่") };
+  if (!isUserActive_(id)) return { error: authError_("AUTH_REQUIRED", "บัญชีนี้ถูกปิดใช้งานหรือไม่พบในระบบ กรุณาติดต่อผู้ดูแลระบบ") };
   return { employeeId: id };
 }
 
@@ -1575,6 +1630,7 @@ function handleUpdateUser(payload) {
       if (payload.position !== undefined && posCol !== -1) sheet.getRange(rowIndex, posCol + 1).setValue(safeCell_(payload.position));
       if (payload.plant !== undefined && plantCol !== -1) sheet.getRange(rowIndex, plantCol + 1).setValue(safeCell_(payload.plant));
       if (payload.pin !== undefined && pinCol !== -1) sheet.getRange(rowIndex, pinCol + 1).setValue(cleanId(payload.pin));
+      clearUserActiveCache_(employeeId);
       if (payload.status !== undefined && statusCol !== -1) sheet.getRange(rowIndex, statusCol + 1).setValue(safeCell_(payload.status));
 
       if (payload.isAdmin !== undefined) {
@@ -1654,6 +1710,8 @@ function handleToggleUserStatus(payload) {
     if (rowEmpId === employeeId || (rowEmpId.replace(/^0+/, "") === employeeId.replace(/^0+/, ""))) {
       const rowIndex = i + 1;
       sheet.getRange(rowIndex, statusCol + 1).setValue(newStatus);
+
+      clearUserActiveCache_(employeeId);
 
       // If user is deactivated, deactivate in Admin sheet as well
       if (newStatus.toLowerCase() !== "active") {

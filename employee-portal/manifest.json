@@ -1,14 +1,23 @@
 {
+  "id": "./index.html",
   "name": "Employee Portal - ศูนย์บริการพนักงาน",
   "short_name": "BW Portal",
   "description": "ระบบเว็บแอปพลิเคชันพอร์ทัลบริการพนักงานภายในองค์กร ข่าวสาร กิจกรรม และระบบงานดิจิทัล",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
   "background_color": "#F0F9FF",
   "theme_color": "#0284C7",
   "lang": "th",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "assets/icons/icon-192.png",

@@ -2,13 +2,15 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ระบบจัดการข้อมูลสำหรับแอดมิน | Employee Portal</title>
 
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0284C7">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="BW Portal">
 
@@ -26,7 +28,7 @@
     <div class="nav-container">
       <a href="index.html" class="brand">
         <img src="assets/icons/app-icon.png" alt="BW Logo" class="brand-img">
-        <span>Employee Portal <span style="font-size: 0.8rem; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">ADMIN</span></span>
+        <span>Employee Portal <span class="brand-tag" style="font-size: 0.8rem; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">ADMIN</span></span>
       </a>
 
       <nav>
@@ -213,7 +215,7 @@
             </div>
 
             <form id="adminVideosForm" onsubmit="event.preventDefault(); saveAdminVideos();">
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
                 <!-- Video 1 -->
                 <div class="video-edit-slot-card" style="background: white; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
                   <div class="slot-badge">ช่องที่ 1 (YouTube Slot 1)</div>
