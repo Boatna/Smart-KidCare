@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ระบบประเมินพัฒนาการ DSPM</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#1a6b3c;--g2:#145a32;--gold:#f0a500;--red:#c0392b;--orange:#e67e22;
+  --blue:#2980b9;--ok:#eafaf1;--ok2:#27ae60;--bad:#fef0ed;--bad2:#c0392b;
+  --card:#fff;--bg:#f4f7f4;--txt:#1a2a1a;--muted:#6b7c6b;--r:12px;
+  --sh:0 2px 16px rgba(26,107,60,.1);
+}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;line-height:1.65}
+.hdr{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;padding:16px 20px 12px;text-align:center;position:sticky;top:0;z-index:100;box-shadow:0 3px 16px rgba(0,0,0,.2)}
+.hdr h1{font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px}
+.hdr p{font-size:12px;opacity:.8;margin-top:2px}
+.steps{display:flex;background:#fff;border-bottom:1px solid #e8ede8;overflow-x:auto}
+.step{flex:1;min-width:80px;text-align:center;padding:10px 6px;font-size:12px;color:var(--muted);border-bottom:3px solid transparent;transition:all .2s}
+.step.on{color:var(--g);border-bottom-color:var(--g);font-weight:700}
+.step.done{color:var(--ok2);border-bottom-color:var(--ok2)}
+.step-ico{font-size:18px;display:block}
+.wrap{max-width:680px;margin:0 auto;padding:16px;padding-bottom:60px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:20px;margin-bottom:14px}
+.ctitle{font-size:15px;font-weight:700;color:var(--g);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.ctitle::before{content:'';width:4px;height:18px;background:var(--g);border-radius:2px;flex-shrink:0}
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.fl .req{color:var(--red)}
+input[type=text],input[type=date],select,textarea{
+  width:100%;padding:11px 14px;border:1.5px solid #d5e3d5;border-radius:8px;
+  font-size:15px;font-family:'Sarabun',sans-serif;background:#fafffe;color:var(--txt);
+  transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(26,107,60,.12)}
+.abadge{display:inline-block;background:var(--g);color:#fff;padding:3px 12px;border-radius:20px;font-size:13px;font-weight:600;margin-top:6px}
+
+/* ===== Error Banner (แก้ไขจากเดิมที่ไม่มี id=errBanner) ===== */
+.err-banner{background:#fdecea;border:1.5px solid #e57373;border-radius:10px;padding:14px 16px;font-size:13px;color:#b71c1c;margin-bottom:14px;display:none;line-height:1.7}
+.err-banner.on{display:block}
+.err-banner strong{display:block;margin-bottom:4px;font-size:14px}
+.err-banner pre{background:rgba(0,0,0,.05);padding:8px;border-radius:6px;font-size:11px;overflow-x:auto;margin-top:6px;white-space:pre-wrap;word-break:break-all}
+
+/* Connection status */
+.conn-status{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 12px;border-radius:20px;margin-bottom:12px;font-weight:600}
+.conn-status.checking{background:#fff8e1;color:#7d5c00}
+.conn-status.ok{background:#d5f5e3;color:#1e8449}
+.conn-status.fail{background:#fdecea;color:#b71c1c}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+
+.notice{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;font-size:13px;color:#7d5c00;margin-top:8px;display:none}
+.notice.on{display:block}
+.dtabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
+.dtab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid #ddd;background:#f5f5f5;color:#555;transition:all .2s;white-space:nowrap}
+.dtab.on{border-color:var(--g);background:var(--g);color:#fff}
+.dtab.on.GM{background:#1565c0;border-color:#1565c0}
+.dtab.on.FM{background:#6a1b9a;border-color:#6a1b9a}
+.dtab.on.RL{background:#00695c;border-color:#00695c}
+.dtab.on.EL{background:#e65100;border-color:#e65100}
+.dtab.on.PS{background:#558b2f;border-color:#558b2f}
+.prog-wrap{background:#e8ede8;border-radius:20px;height:8px;overflow:hidden;margin-bottom:4px}
+.prog-bar{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--g),var(--gold));transition:width .4s;width:0}
+.prog-txt{font-size:12px;color:var(--muted);text-align:right}
+.prog-txt strong{color:var(--g)}
+.dsum{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.dsi{background:#f0f4f0;border-radius:8px;padding:8px 4px;text-align:center;font-size:12px}
+.dsi .dl{font-weight:700;font-size:13px}
+.dsi .dc{color:var(--muted)}
+.dsi.ok{background:#d5f5e3}.dsi.no{background:#fde8e4}
+.qc{border:1.5px solid #e0e8e0;border-left:5px solid #ccc;border-radius:var(--r);padding:14px;margin-bottom:10px;background:#fff;animation:sli .25s ease}
+@keyframes sli{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.qc.GM{border-left-color:#1565c0}.qc.FM{border-left-color:#6a1b9a}.qc.RL{border-left-color:#00695c}.qc.EL{border-left-color:#e65100}.qc.PS{border-left-color:#558b2f}
+.qc.apass{border-color:var(--ok2);background:#fafff8}
+.qc.afail{border-color:var(--bad2);background:#fff8f7}
+.qc.unans{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,.12);animation:shk .3s ease}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.qhdr{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.ibadge{background:var(--g);color:#fff;border-radius:6px;font-size:11px;font-weight:700;padding:2px 8px;white-space:nowrap;flex-shrink:0}
+.dpill{border-radius:6px;font-size:11px;font-weight:700;padding:2px 8px;white-space:nowrap;flex-shrink:0;color:#fff}
+.dpill.GM{background:#1565c0}.dpill.FM{background:#6a1b9a}.dpill.RL{background:#00695c}.dpill.EL{background:#e65100}.dpill.PS{background:#558b2f}
+.stxt{font-weight:600;font-size:14px;color:var(--txt);line-height:1.4}
+.toggle{background:none;border:none;color:var(--blue);font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;padding:0;margin-bottom:4px;display:flex;align-items:center;gap:4px;font-weight:600}
+.toggle .arr{transition:transform .2s;display:inline-block}
+.toggle.on .arr{transform:rotate(180deg)}
+.coll{display:none}.coll.on{display:block}
+.ibox{border-radius:7px;padding:9px 12px;font-size:13px;margin-bottom:8px;line-height:1.7;white-space:pre-wrap}
+.mbox{background:#e8f4f8;border-left:3px solid var(--blue)}
+.tbox{background:#eafaf1;border-left:3px solid var(--ok2)}
+.ilbl{font-weight:700;font-size:12px;display:block;margin-bottom:3px}
+.ilbl.m{color:#1a5276}.ilbl.t{color:#1e8449}
+.rgrp{display:flex;gap:8px;margin-top:10px}
+.rbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border-radius:8px;border:2px solid #d5e3d5;cursor:pointer;font-size:15px;font-weight:700;font-family:'Sarabun',sans-serif;transition:all .15s;user-select:none}
+.rbtn input{display:none}
+.rbtn.pass:hover{background:#d5f5e3;border-color:var(--ok2)}
+.rbtn.fail:hover{background:#fde8e4;border-color:var(--bad2)}
+.rbtn.pass.on{background:var(--ok);border-color:var(--ok2);color:#1e8449}
+.rbtn.fail.on{background:var(--bad);border-color:var(--bad2);color:var(--red)}
+.ares{border-radius:var(--r);padding:14px 16px;text-align:center;font-size:16px;font-weight:800;display:none;margin-bottom:14px}
+.ares.on{display:block}
+.ares.pass{background:#d5f5e3;color:#1e8449;border:2px solid var(--ok2)}
+.ares.warn{background:#fef9e7;color:#9c640c;border:2px solid var(--gold)}
+.ares.fail{background:var(--bad);color:var(--red);border:2px solid var(--bad2)}
+.msg{border-radius:var(--r);padding:14px;text-align:center;font-weight:700;font-size:15px;display:none;margin-top:16px}
+.msg.on{display:block}
+.msg.ok{background:#d5f5e3;color:#1e8449;border:2px solid var(--ok2)}
+.msg.err{background:var(--bad);color:var(--red);border:2px solid var(--bad2)}
+.brow{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:100px;padding:13px 10px;border:none;border-radius:8px;font-size:15px;font-weight:700;font-family:'Sarabun',sans-serif;cursor:pointer;transition:all .18s}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.primary{background:var(--g);color:#fff}
+.btn.primary:hover:not(:disabled){background:var(--g2);transform:translateY(-1px)}
+.btn.sec{background:#e8f0e8;color:var(--g);border:2px solid var(--g)}
+.btn.sec:hover:not(:disabled){background:#d0e4d0}
+.btn.grey{background:#7f8c8d;color:#fff}
+.btn.grey:hover:not(:disabled){background:#626567}
+.btn.danger{background:var(--red);color:#fff}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.mbox2{background:#fff;border-radius:16px;padding:22px 20px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.22);max-height:90vh;overflow-y:auto;animation:pop .25s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.88);opacity:0}to{transform:scale(1);opacity:1}}
+.mtitle{font-size:18px;font-weight:800;color:var(--g);margin-bottom:14px;text-align:center}
+.mrow{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f4f0;font-size:14px;gap:8px}
+.mrow:last-of-type{border-bottom:none}
+.mlbl{color:var(--muted);flex-shrink:0}.mval{font-weight:600;text-align:right}
+.mdgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:10px 0}
+.mdi{text-align:center;border-radius:6px;padding:6px 2px;font-size:11px}
+.mdi .mdl{font-weight:800;font-size:13px}
+.mdi.all{background:#d5f5e3;color:#1e8449}.mdi.has{background:#fde8e4;color:var(--red)}.mdi.na{background:#f0f0f0;color:#999}
+.flist{background:#fff8f7;border:1px dashed var(--bad2);border-radius:8px;padding:8px 10px;max-height:180px;overflow-y:auto;margin:8px 0;font-size:13px}
+.fi{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #fde8e4;gap:8px}
+.fi:last-child{border-bottom:none}
+.wf{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 12px;font-size:13px;color:#7d5c00;margin:10px 0;line-height:1.6}
+.wf strong{display:block;margin-bottom:3px}
+.sbadge{display:inline-block;border-radius:8px;padding:4px 12px;font-size:13px;font-weight:700}
+.sb-ok{background:#d5f5e3;color:#1e8449}.sb-warn{background:#fef9e7;color:#9c640c}.sb-fail{background:var(--bad);color:var(--red)}
+.mactions{display:flex;gap:8px;margin-top:16px}
+.loader{text-align:center;padding:32px;color:var(--g);font-weight:600;font-size:15px}
+.loader::after{content:'';display:block;width:36px;height:36px;border:4px solid #d5e3d5;border-top-color:var(--g);border-radius:50%;animation:spin .7s linear infinite;margin:12px auto 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.div{border:none;border-top:2px dashed #d5e3d5;margin:20px 0}
+.histbox{background:#f0f4f0;border-radius:8px;padding:10px 12px;font-size:13px;margin-top:8px;display:none}
+.histbox.on{display:block}
+.hhi{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #e0e8e0;font-size:12px}
+.hhi:last-child{border-bottom:none}
+/* Debug panel */
+.debug-panel{background:#1a1a2e;color:#a8ff78;border-radius:8px;padding:12px;font-size:11px;font-family:monospace;margin-bottom:12px;max-height:200px;overflow-y:auto;display:none}
+.debug-panel.on{display:block}
+@media print{.hdr,.steps,.brow,.dtabs,.modal,.toggle,.conn-status,.debug-panel{display:none!important}.wrap{max-width:100%;padding:0}.qc{break-inside:avoid;border:1px solid #ccc!important}}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>🌱 ระบบประเมินพัฒนาการ DSPM</h1>
+  <p>Developmental Surveillance and Promotion Manual</p>
+</div>
+<div class="steps" id="stepBar">
+  <div class="step on" id="s1"><span class="step-ico">👶</span>ข้อมูลเด็ก</div>
+  <div class="step"    id="s2"><span class="step-ico">📋</span>ประเมิน</div>
+  <div class="step"    id="s3"><span class="step-ico">📊</span>สรุปผล</div>
+</div>
+<div class="wrap">
+
+  <!-- Connection Status -->
+  <div id="connStatus" class="conn-status checking">
+    <div class="conn-dot"></div>
+    <span id="connText">กำลังเชื่อมต่อ Google Sheet...</span>
+  </div>
+
+  <!-- Error Banner (แก้ไข: เพิ่ม id="errBanner" ให้ถูกต้อง) -->
+  <div class="err-banner" id="errBanner">
+    <strong id="errTitle">⚠️ เกิดข้อผิดพลาด</strong>
+    <div id="errDetail"></div>
+    <pre id="errTech" style="display:none"></pre>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sec" style="flex:none;padding:6px 14px;font-size:13px" onclick="retryConnect()">🔄 ลองใหม่</button>
+      <button class="btn grey" style="flex:none;padding:6px 14px;font-size:13px" onclick="toggleDebug()">🔧 รายละเอียดทางเทคนิค</button>
+    </div>
+  </div>
+
+  <!-- Debug Panel -->
+  <div class="debug-panel" id="debugPanel"></div>
+
+  <!-- STEP 1 -->
+  <div id="p1">
+    <div class="card">
+      <div class="ctitle">ข้อมูลเด็กและผู้ประเมิน</div>
+      <div class="fg">
+        <label class="fl">ชื่อ-นามสกุลเด็ก <span class="req">*</span></label>
+        <input type="text" id="childName" placeholder="กรอกชื่อ-นามสกุลเด็ก..." oninput="onNameInput()">
+      </div>
+      <div class="fg">
+        <label class="fl">ช่วงวัยที่ประเมิน <span class="req">*</span></label>
+        <select id="ageGroup" onchange="onAgeChange()">
+          <option value="">⏳ กำลังโหลด...</option>
+        </select>
+        <div id="histBox" class="histbox">
+          <div style="font-weight:700;color:var(--g);margin-bottom:6px">📋 ประวัติการประเมินก่อนหน้า</div>
+          <div id="histList"></div>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">รอบที่ประเมิน</label>
+        <select id="round">
+          <option value="1">รอบที่ 1 (ครั้งแรก)</option>
+          <option value="2">รอบที่ 2 (ติดตามหลังกระตุ้น 30 วัน)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">ผู้ประเมิน</label>
+        <input type="text" id="assessor" placeholder="ชื่อผู้ประเมิน">
+      </div>
+      <div class="brow" style="margin-top:6px">
+        <button class="btn primary" onclick="startAssess()" id="startBtn">เริ่มประเมิน →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="p2" style="display:none">
+    <div class="dtabs" id="dtabs"></div>
+    <div style="margin-bottom:12px">
+      <div class="prog-wrap"><div class="prog-bar" id="pbar"></div></div>
+      <div class="prog-txt">ตอบแล้ว <strong id="pcnt">0</strong> / <strong id="ptot">0</strong> ข้อ</div>
+    </div>
+    <div class="dsum" id="dsum"></div>
+    <div id="qloader" class="loader" style="display:none">กำลังโหลดแบบประเมิน</div>
+    <div id="qarea"></div>
+    <hr class="div">
+    <div id="ares" class="ares"></div>
+    <div class="card" id="notesCard" style="display:none">
+      <div class="ctitle">ข้อสังเกตเพิ่มเติม</div>
+      <textarea id="notes" rows="3" placeholder="ระบุพฤติกรรมหรือข้อสังเกต..."></textarea>
+      <div class="brow" style="margin-top:12px">
+        <button class="btn sec" onclick="resetAll()">🔄 เริ่มใหม่</button>
+        <button class="btn grey" onclick="window.print()">🖨️</button>
+        <button class="btn primary" onclick="openConfirm()">บันทึกผล 💾</button>
+      </div>
+    </div>
+    <div id="msgbox" class="msg"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="p3" style="display:none">
+    <div class="card">
+      <div class="ctitle">ผลการประเมิน</div>
+      <div id="resultArea"></div>
+      <div class="brow" style="margin-top:14px">
+        <button class="btn sec" onclick="resetAll()">🔄 ประเมินเด็กคนต่อไป</button>
+        <button class="btn grey" onclick="window.print()">🖨️ พิมพ์</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+  <div class="mbox2">
+    <div class="mtitle">📋 สรุปก่อนบันทึก</div>
+    <div class="mrow"><span class="mlbl">ชื่อเด็ก</span><span class="mval" id="m_name"></span></div>
+    <div class="mrow"><span class="mlbl">อายุ/ช่วงวัย</span><span class="mval" id="m_age"></span></div>
+    <div class="mrow"><span class="mlbl">รอบที่ประเมิน</span><span class="mval" id="m_round"></span></div>
+    <div class="mrow"><span class="mlbl">ผ่าน/ไม่ผ่าน</span><span class="mval" id="m_score"></span></div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:10px;margin-bottom:4px">ผลรายด้าน</div>
+    <div class="mdgrid" id="m_dom"></div>
+    <div id="m_fails" style="display:none">
+      <div style="font-size:13px;font-weight:700;color:var(--red);margin-top:8px;margin-bottom:4px">⚠️ ข้อที่ไม่ผ่าน</div>
+      <div class="flist" id="m_flist"></div>
+    </div>
+    <div id="m_wf" class="wf" style="display:none"></div>
+    <div style="text-align:center;margin-top:10px" id="m_badge"></div>
+    <div class="mactions">
+      <button class="btn sec" onclick="closeModal()">← กลับแก้ไข</button>
+      <button class="btn primary" id="saveBtn" onclick="doSave()">✅ ยืนยันบันทึก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ⚙️  ใส่ URL Apps Script Deployment ที่นี่
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZ201JIti61s7QjFEoMsrLGQUdVSCa-G9YBbKa6oyCyFdiFOkw1X7Dt0ktSuRBu5M/exec';
+// ตัวอย่าง: 'https://script.google.com/macros/s/AKfycb.../exec'
+
+// ============================================================
+// State
+// ============================================================
+let questions=[], answers={}, answered=0, curDomain='ALL', domCnt={}, ageMonths=null;
+let debugLog = [];
+const KEY_AGES=['1 เดือน','9 เดือน','12 เดือน','18 เดือน','42 เดือน','60 เดือน'];
+
+// ============================================================
+// Debug logging
+// ============================================================
+function dlog(msg, data) {
+  const ts = new Date().toLocaleTimeString('th');
+  const entry = `[${ts}] ${msg}` + (data ? '\n  → ' + JSON.stringify(data).slice(0,200) : '');
+  debugLog.push(entry);
+  const panel = document.getElementById('debugPanel');
+  if (panel && panel.classList.contains('on')) {
+    panel.textContent = debugLog.slice(-30).join('\n');
+    panel.scrollTop = panel.scrollHeight;
+  }
+  console.log('[DSPM]', msg, data || '');
+}
+
+function toggleDebug() {
+  const panel = document.getElementById('debugPanel');
+  panel.classList.toggle('on');
+  panel.textContent = debugLog.join('\n');
+  panel.scrollTop = panel.scrollHeight;
+}
+
+// ============================================================
+// API Call
+// ============================================================
+// ============================================================
+// JSONP API — แก้ปัญหา CORS "Failed to fetch"
+// Google Apps Script ไม่รองรับ fetch โดยตรงจาก browser
+// ใช้ <script> tag injection (JSONP) แทน
+// ============================================================
+function api(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    if (!SCRIPT_URL || SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+      reject(new Error(
+        'กรุณาแก้ไข SCRIPT_URL ในไฟล์ HTML\n' +
+        'ให้เป็น URL ของ Google Apps Script ที่ Deploy แล้ว\n' +
+        'ตัวอย่าง: https://script.google.com/macros/s/AKfycb.../exec'
+      ));
+      return;
+    }
+
+    dlog('API call: ' + action, params);
+
+    // สร้าง callback name ที่ไม่ซ้ำกัน
+    const cbName = '_dspm_cb_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
+
+    // Timeout 20 วินาที
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(
+        'หมดเวลาเชื่อมต่อ (20 วินาที)\n' +
+        'กรุณาตรวจสอบ:\n' +
+        '• URL ถูกต้องหรือไม่\n' +
+        '• Apps Script Deploy เป็น "Anyone" หรือยัง\n' +
+        '• มีอินเทอร์เน็ตหรือไม่'
+      ));
+    }, 20000);
+
+    // Callback function ที่ Apps Script จะเรียก
+    window[cbName] = function(data) {
+      cleanup();
+      dlog('API response: ' + action, { status: data.status });
+      resolve(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      const el = document.getElementById(cbName);
+      if (el) el.remove();
+    }
+
+    // สร้าง URL พร้อม params ทั้งหมดเป็น query string
+    // Apps Script doGet() จะรับและเรียก callback
+    const allParams = { action, callback: cbName, ...flattenParams(params) };
+    const qs = Object.entries(allParams)
+      .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(
+        typeof v === 'object' ? JSON.stringify(v) : v
+      ))
+      .join('&');
+
+    const url = SCRIPT_URL + '?' + qs;
+    dlog('JSONP URL: ' + url.slice(0, 120) + '...');
+
+    // Inject <script> tag
+    const script = document.createElement('script');
+    script.id = cbName;
+    script.src = url;
+    script.onerror = function() {
+      cleanup();
+      reject(new Error(
+        'โหลด Apps Script ไม่สำเร็จ\n' +
+        'สาเหตุที่เป็นไปได้:\n' +
+        '• URL ไม่ถูกต้อง (ต้องลงท้ายด้วย /exec)\n' +
+        '• Apps Script ยังไม่ได้ Deploy\n' +
+        '• ไม่มีอินเทอร์เน็ต'
+      ));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// แปลง params ให้เป็น flat key=value สำหรับ query string
+// object/array จะถูก JSON.stringify
+function flattenParams(params) {
+  const flat = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (v === null || v === undefined) continue;
+    flat[k] = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+  }
+  return flat;
+}
+
+// ============================================================
+// Init
+// ============================================================
+window.onload = async function() {
+  dlog('App initialized');
+  await loadAgeGroups();
+};
+
+async function retryConnect() {
+  hideErr();
+  setConnStatus('checking', 'กำลังเชื่อมต่อใหม่...');
+  await loadAgeGroups();
+}
+
+async function loadAgeGroups() {
+  const sel = document.getElementById('ageGroup');
+  sel.innerHTML = '<option value="">⏳ กำลังโหลด...</option>';
+  document.getElementById('startBtn').disabled = true;
+
+  try {
+    // ทดสอบ ping ก่อน
+    const ping = await api('ping');
+    dlog('Ping result', ping);
+
+    const r = await api('getAgeGroups');
+
+    if (r.status === 'success' && r.data && r.data.length) {
+      sel.innerHTML = '<option value="">-- เลือกช่วงวัย --</option>';
+
+      const keyGrp = document.createElement('optgroup');
+      keyGrp.label = '⭐ ช่วงคัดกรองหลัก';
+      const otherGrp = document.createElement('optgroup');
+      otherGrp.label = '📋 ช่วงวัยอื่น';
+
+      let hasKey = false, hasOther = false;
+      r.data.forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.name;
+        o.textContent = a.name;
+        if (a.isKey) { keyGrp.appendChild(o); hasKey = true; }
+        else { otherGrp.appendChild(o); hasOther = true; }
+      });
+
+      if (hasKey) sel.appendChild(keyGrp);
+      if (hasOther) sel.appendChild(otherGrp);
+
+      hideErr();
+      setConnStatus('ok', `เชื่อมต่อสำเร็จ — พบ ${r.total || r.data.length} ช่วงวัย`);
+      document.getElementById('startBtn').disabled = false;
+      dlog('Age groups loaded', { count: r.data.length });
+    } else {
+      throw new Error(r.message || 'ไม่พบข้อมูลช่วงวัยใน Google Sheet');
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">❌ โหลดไม่สำเร็จ</option>';
+    setConnStatus('fail', 'เชื่อมต่อไม่สำเร็จ');
+    showErr(e.message, '');
+    dlog('Init error', { msg: e.message });
+  }
+}
+
+// ============================================================
+// Connection Status
+// ============================================================
+function setConnStatus(type, text) {
+  const el = document.getElementById('connStatus');
+  el.className = 'conn-status ' + type;
+  document.getElementById('connText').textContent = text;
+}
+
+// ============================================================
+// Error Banner
+// ============================================================
+function showErr(msg, tech) {
+  const banner = document.getElementById('errBanner');
+  const title = document.getElementById('errTitle');
+  const detail = document.getElementById('errDetail');
+  const techEl = document.getElementById('errTech');
+
+  // แยก title กับ detail
+  const lines = String(msg).split('\n');
+  title.textContent = '⚠️ ' + lines[0];
+  detail.innerHTML = lines.slice(1).map(l => `<div style="margin-top:3px">${esc(l)}</div>`).join('');
+
+  if (tech) {
+    techEl.textContent = tech;
+    techEl.style.display = 'block';
+  } else {
+    techEl.style.display = 'none';
+  }
+
+  banner.classList.add('on');
+}
+
+function hideErr() {
+  document.getElementById('errBanner').classList.remove('on');
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function $(id) { return document.getElementById(id); }
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function calcAge() {
+  const v = $('childBirthdate').value;
+  if (!v) { $('ageBadge').style.display = 'none'; return; }
+
+  const birth = new Date(v);
+  const today = new Date();
+  let months = (today.getFullYear() - birth.getFullYear()) * 12
+             + (today.getMonth() - birth.getMonth());
+  if (today.getDate() < birth.getDate()) months--;
+
+  if (months < 0) {
+    alert('วันเกิดต้องไม่ใช่อนาคต');
+    $('childBirthdate').value = '';
+    return;
+  }
+
+  ageMonths = months;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  $('ageTxt').textContent = '🎂 อายุ ' + (years ? years + ' ปี ' : '') + rem + ' เดือน (' + months + ' เดือน)';
+  $('ageBadge').style.display = 'block';
+}
+
+function onNameInput() {
+  const name = $('childName').value.trim();
+  const ag = $('ageGroup').value;
+  if (name && ag) loadHist(name, ag);
+}
+
+function onAgeChange() {
+  const ag = $('ageGroup').value;
+  $('keyNotice').classList.toggle('on', KEY_AGES.includes(ag));
+  $('histBox').classList.remove('on');
+  const name = $('childName').value.trim();
+  if (ag && name) loadHist(name, ag);
+}
+
+async function loadHist(name, ag) {
+  try {
+    const r = await api('getChildHistory', { childName: name, ageGroup: ag });
+    if (r.status === 'success' && r.data && r.data.length) {
+      $('histList').innerHTML = r.data.map(h => `
+        <div class="hhi">
+          <span>${String(h.date).slice(0,16) || h.date}</span>
+          <span>รอบที่ ${h.round}</span>
+          <span style="font-weight:700;color:${
+            h.status === 'สมวัย' ? '#27ae60'
+            : h.status === 'สงสัยล่าช้า' ? '#e67e22'
+            : '#c0392b'
+          }">${h.status}</span>
+        </div>
+      `).join('');
+      $('histBox').classList.add('on');
+    }
+  } catch (e) {
+    dlog('loadHist error', { msg: e.message });
+  }
+}
+
+function setStep(n) {
+  ['s1','s2','s3'].forEach((id, i) => {
+    const el = $(id);
+    el.classList.remove('on', 'done');
+    if (i + 1 < n) el.classList.add('done');
+    else if (i + 1 === n) el.classList.add('on');
+  });
+}
+
+// ============================================================
+// Start Assessment
+// ============================================================
+async function startAssess() {
+  const name = $('childName').value.trim();
+  const ag   = $('ageGroup').value;
+
+  if (!name) { alert('กรุณากรอกชื่อเด็ก'); $('childName').focus(); return; }
+  if (!ag)   { alert('กรุณาเลือกช่วงวัย'); $('ageGroup').focus(); return; }
+
+  $('p1').style.display = 'none';
+  $('p2').style.display = 'block';
+  setStep(2);
+  $('qloader').style.display = 'block';
+  $('qarea').innerHTML = '';
+  $('notesCard').style.display = 'none';
+  $('ares').classList.remove('on');
+  questions = []; answers = {}; answered = 0; curDomain = 'ALL';
+
+  try {
+    const r = await api('getAssessmentData', { ageGroup: ag });
+    $('qloader').style.display = 'none';
+
+    if (r.status !== 'success') {
+      $('qarea').innerHTML = `
+        <div class="card" style="color:var(--red);text-align:center">
+          <div style="font-size:24px;margin-bottom:8px">⚠️</div>
+          <div style="font-weight:700;margin-bottom:6px">ไม่สามารถโหลดแบบประเมินได้</div>
+          <div style="color:var(--muted);font-size:14px">${esc(r.message)}</div>
+          <button class="btn sec" style="margin-top:12px" onclick="resetAll()">← กลับ</button>
+        </div>
+      `;
+      return;
+    }
+
+    if (!r.data || !r.data.length) {
+      $('qarea').innerHTML = `
+        <div class="card" style="text-align:center;color:var(--muted)">
+          <div style="font-size:24px;margin-bottom:8px">📋</div>
+          ยังไม่มีข้อมูลคำถามในช่วงวัย "${esc(ag)}"
+          <button class="btn sec" style="margin-top:12px" onclick="resetAll()">← กลับ</button>
+        </div>
+      `;
+      return;
+    }
+
+    questions = r.data;
+    domCnt = r.domainCount || {};
+    buildTabs(domCnt, r.totalItems);
+    updateDsum();
+    renderQ('ALL');
+    $('notesCard').style.display = 'block';
+    $('ptot').textContent = r.totalItems;
+    updateProg();
+    dlog('Questions loaded', { count: r.totalItems, domains: domCnt });
+  } catch (e) {
+    $('qloader').style.display = 'none';
+    $('qarea').innerHTML = `
+      <div class="card" style="color:var(--red);text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">❌</div>
+        <div style="font-weight:700;margin-bottom:6px">โหลดไม่สำเร็จ</div>
+        <div style="color:var(--muted);font-size:14px">${esc(e.message)}</div>
+        <button class="btn sec" style="margin-top:12px" onclick="resetAll()">← กลับ</button>
+      </div>
+    `;
+    dlog('startAssess error', { msg: e.message });
+  }
+}
+
+// ============================================================
+// Build Domain Tabs
+// ============================================================
+function buildTabs(cnt, tot) {
+  const box = $('dtabs');
+  box.innerHTML = '';
+  box.appendChild(mkTab('ALL', `📋 ทั้งหมด (${tot})`, true));
+  [
+    { d:'GM', l:'กล้ามเนื้อใหญ่' },
+    { d:'FM', l:'กล้ามเนื้อเล็ก' },
+    { d:'RL', l:'ภาษารับ' },
+    { d:'EL', l:'ภาษาแสดง' },
+    { d:'PS', l:'สังคม' }
+  ].forEach(({ d, l }) => {
+    if (cnt[d] > 0) {
+      const t = mkTab(d, `${d} (${cnt[d]})`, false);
+      t.classList.add(d);
+      t.title = l;
+      box.appendChild(t);
+    }
+  });
+}
+
+function mkTab(d, lbl, active) {
+  const t = document.createElement('div');
+  t.className = 'dtab' + (active ? ' on' : '');
+  t.textContent = lbl;
+  t.onclick = () => {
+    document.querySelectorAll('.dtab').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    curDomain = d;
+    renderQ(d);
+  };
+  return t;
+}
+
+// ============================================================
+// Render Questions
+// ============================================================
+function renderQ(fd) {
+  const arr = fd === 'ALL' ? questions : questions.filter(q => q.domain === fd);
+  if (!arr.length) {
+    $('qarea').innerHTML = '<div class="card" style="text-align:center;color:var(--muted)">ไม่มีข้อในด้านนี้</div>';
+    return;
+  }
+
+  $('qarea').innerHTML = arr.map(item => {
+    const i = questions.indexOf(item);
+    const a = answers[i];
+    const cc = 'qc ' + item.domain + (a === 'ผ่าน' ? ' apass' : a === 'ไม่ผ่าน' ? ' afail' : '');
+    const m = item.method  ? esc(item.method).replace(/\n/g, '<br>') : '<span style="color:var(--muted)">-</span>';
+    const tr = item.training ? esc(item.training).replace(/\n/g, '<br>') : '<span style="color:var(--muted)">-</span>';
+
+    return `
+      <div class="${cc}" id="c${i}">
+        <div class="qhdr">
+          <span class="ibadge">ข้อ ${item.itemNo}</span>
+          <span class="dpill ${item.domain}">${item.domain}</span>
+          <span class="stxt">${esc(item.skill)}</span>
+        </div>
+        ${item.method ? `
+          <button class="toggle" onclick="tog('m${i}',this)">
+            <span class="arr">▼</span> 📌 วิธีประเมิน
+          </button>
+          <div class="coll ibox mbox" id="m${i}">
+            <span class="ilbl m">วิธีประเมิน/เฝ้าระวัง</span>${m}
+          </div>
+        ` : ''}
+        ${item.training ? `
+          <button class="toggle" onclick="tog('t${i}',this)">
+            <span class="arr">▼</span> 💡 วิธีฝึกทักษะ
+          </button>
+          <div class="coll ibox tbox" id="t${i}">
+            <span class="ilbl t">วิธีฝึกทักษะ</span>${tr}
+          </div>
+        ` : ''}
+        <div class="rgrp">
+          <label class="rbtn pass${a === 'ผ่าน' ? ' on' : ''}" id="bp${i}" onclick="pick(${i},'ผ่าน')">
+            <input type="radio" name="q${i}"> ✅ ผ่าน
+          </label>
+          <label class="rbtn fail${a === 'ไม่ผ่าน' ? ' on' : ''}" id="bf${i}" onclick="pick(${i},'ไม่ผ่าน')">
+            <input type="radio" name="q${i}"> ❌ ไม่ผ่าน
+          </label>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function tog(id, btn) {
+  $(id).classList.toggle('on');
+  btn.classList.toggle('on');
+}
+
+function pick(i, val) {
+  const wasAnswered = answers.hasOwnProperty(i);
+  answers[i] = val;
+  if (!wasAnswered) answered++;
+
+  const c = $('c' + i);
+  if (c) { c.classList.remove('unans', 'apass', 'afail'); c.classList.add(val === 'ผ่าน' ? 'apass' : 'afail'); }
+  const bp = $('bp' + i), bf = $('bf' + i);
+  if (bp) bp.classList.toggle('on', val === 'ผ่าน');
+  if (bf) bf.classList.toggle('on', val === 'ไม่ผ่าน');
+
+  updateProg();
+  updateDsum();
+  updateAres();
+}
+
+function updateProg() {
+  const tot = questions.length;
+  const pct = tot ? (answered / tot * 100) : 0;
+  $('pbar').style.width = pct + '%';
+  $('pcnt').textContent = answered;
+}
+
+function updateDsum() {
+  const p = { GM:0, FM:0, RL:0, EL:0, PS:0 };
+  const f = { GM:0, FM:0, RL:0, EL:0, PS:0 };
+  questions.forEach((q, i) => {
+    if (answers.hasOwnProperty(i)) {
+      answers[i] === 'ผ่าน' ? p[q.domain]++ : f[q.domain]++;
+    }
+  });
+  $('dsum').innerHTML = ['GM','FM','RL','EL','PS'].map(d => {
+    if (!domCnt[d]) return '';
+    const cls = f[d] > 0 ? 'no' : p[d] === domCnt[d] ? 'ok' : '';
+    return `<div class="dsi ${cls}"><div class="dl">${d}</div><div class="dc">${p[d]}/${domCnt[d]}</div></div>`;
+  }).join('');
+}
+
+function updateAres() {
+  if (Object.keys(answers).length < questions.length) return;
+  const fail = Object.values(answers).filter(v => v === 'ไม่ผ่าน').length;
+  const r = parseInt($('round').value) || 1;
+  const el = $('ares');
+  el.classList.add('on');
+  if (!fail) {
+    el.className = 'ares on pass';
+    el.textContent = '🎉 ผ่านทุกข้อ (สมวัย) — ส่งเสริมพัฒนาการต่อตามช่วงวัยถัดไป';
+  } else if (r === 1) {
+    el.className = 'ares on warn';
+    el.textContent = `⚠️ ไม่ผ่าน ${fail} ข้อ — สงสัยล่าช้า กระตุ้น 30 วัน แล้วประเมินซ้ำ`;
+  } else {
+    el.className = 'ares on fail';
+    el.textContent = `🔴 ยังไม่ผ่าน ${fail} ข้อ (รอบที่ 2) — พิจารณาส่งต่อโรงพยาบาล`;
+  }
+}
+
+// ============================================================
+// Confirm Modal
+// ============================================================
+function openConfirm() {
+  const unans = questions.map((_,i) => i).filter(i => !answers.hasOwnProperty(i));
+  if (unans.length) {
+    // กลับไปแสดงทุกข้อ
+    document.querySelectorAll('.dtab').forEach(x => x.classList.remove('on'));
+    const firstTab = document.querySelector('.dtab');
+    if (firstTab) firstTab.classList.add('on');
+    curDomain = 'ALL';
+    renderQ('ALL');
+    setTimeout(() => {
+      unans.forEach(i => { const c = $('c' + i); if (c) c.classList.add('unans'); });
+      const first = $('c' + unans[0]);
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    showMsg(`กรุณาตอบให้ครบทุกข้อ (ยังขาดอีก ${unans.length} ข้อ)`, 'err');
+    return;
+  }
+
+  let pass = 0, fail = 0;
+  const failItems = [];
+  const dr = { GM:{p:0,f:0}, FM:{p:0,f:0}, RL:{p:0,f:0}, EL:{p:0,f:0}, PS:{p:0,f:0} };
+
+  questions.forEach((q, i) => {
+    if (answers[i] === 'ผ่าน') { pass++; dr[q.domain].p++; }
+    else { fail++; dr[q.domain].f++; failItems.push({ no: q.itemNo, skill: q.skill, d: q.domain }); }
+  });
+
+  $('m_name').textContent = $('childName').value;
+  $('m_age').textContent = $('ageGroup').value + (ageMonths != null ? ' (อายุ ' + ageMonths + ' เดือน)' : '');
+  $('m_round').textContent = 'รอบที่ ' + $('round').value;
+  $('m_score').innerHTML = `<span style="color:var(--ok2)">✅ ${pass} ข้อ</span> / <span style="color:var(--red)">❌ ${fail} ข้อ</span>`;
+  $('m_dom').innerHTML = ['GM','FM','RL','EL','PS'].map(d => {
+    if (!domCnt[d]) return '';
+    return `<div class="mdi ${dr[d].f > 0 ? 'has' : dr[d].p > 0 ? 'all' : 'na'}"><div class="mdl">${d}</div>${dr[d].p}/${domCnt[d]}</div>`;
+  }).join('');
+
+  const fs = $('m_fails');
+  if (fail) {
+    fs.style.display = 'block';
+    $('m_flist').innerHTML = failItems.map(f =>
+      `<div class="fi"><span>ข้อ ${f.no} <span class="dpill ${f.d}" style="font-size:10px">${f.d}</span></span><span style="color:var(--muted);text-align:right;max-width:65%">${esc(f.skill)}</span></div>`
+    ).join('');
+  } else {
+    fs.style.display = 'none';
+  }
+
+  const wf = $('m_wf'), bd = $('m_badge'), rv = $('round').value;
+  if (!fail) {
+    wf.style.display = 'none';
+    bd.innerHTML = '<span class="sbadge sb-ok">✅ สมวัย</span>';
+  } else if (rv === '1') {
+    wf.style.display = 'block';
+    wf.innerHTML = '<strong>📋 แนวทางถัดไป</strong>ฝึกทักษะในข้อที่ไม่ผ่านบ่อยๆ เป็นเวลา <strong>30 วัน</strong> แล้วนัดประเมินซ้ำ (รอบที่ 2)';
+    bd.innerHTML = '<span class="sbadge sb-warn">⚠️ สงสัยล่าช้า — กระตุ้น 30 วัน</span>';
+  } else {
+    wf.style.display = 'block';
+    wf.innerHTML = '<strong>🔴 พิจารณาส่งต่อ</strong>ควรส่งต่อหน่วยบริการทุติยภูมิขึ้นไป (รพช./รพท./รพศ.)';
+    bd.innerHTML = '<span class="sbadge sb-fail">🔴 พัฒนาการล่าช้า — ส่งต่อ</span>';
+  }
+
+  $('modal').classList.add('on');
+}
+
+function closeModal() { $('modal').classList.remove('on'); }
+
+// ============================================================
+// Save
+// ============================================================
+async function doSave() {
+  const btn = $('saveBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังบันทึก...';
+
+  // ส่ง fields โดยตรง (ไม่ wrap ใน formObject) เพื่อป้องกัน URL ยาวเกิน
+  const saveParams = {
+    childName:      $('childName').value,
+    childBirthdate: $('childBirthdate').value,
+    childAgeMonths: String(ageMonths || ''),
+    ageGroup:       $('ageGroup').value,
+    screeningRound: $('round').value,
+    assessorName:   $('assessor').value || 'ไม่ระบุ',
+    notes:          $('notes').value,
+    answersJSON:    JSON.stringify(questions.map((_, i) => answers[i])),
+    itemNosJSON:    JSON.stringify(questions.map(q => q.itemNo)),
+    domainsJSON:    JSON.stringify(questions.map(q => q.domain))
+  };
+
+  try {
+    const r = await api('saveData', saveParams);
+    closeModal();
+    btn.disabled = false;
+    btn.textContent = '✅ ยืนยันบันทึก';
+
+    if (r.status === 'success') {
+      showResult(r);
+    } else {
+      showMsg('บันทึกไม่สำเร็จ: ' + r.message, 'err');
+    }
+  } catch (e) {
+    closeModal();
+    btn.disabled = false;
+    btn.textContent = '✅ ยืนยันบันทึก';
+    showMsg('เกิดข้อผิดพลาด: ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+// Show Result (Step 3)
+// ============================================================
+function showResult(r) {
+  $('p2').style.display = 'none';
+  $('p3').style.display = 'block';
+  setStep(3);
+
+  const sc = r.resultStatus === 'สมวัย'       ? 'var(--ok2)'
+           : r.resultStatus === 'สงสัยล่าช้า' ? 'var(--orange)'
+           :                                    'var(--red)';
+  const ic = r.resultStatus === 'สมวัย' ? '🎉'
+           : r.resultStatus === 'สงสัยล่าช้า' ? '⚠️' : '🔴';
+
+  let html = `
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:8px">${ic}</div>
+      <div style="font-size:18px;font-weight:800;color:${sc}">${esc(r.resultText)}</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:4px">
+        ${esc($('childName').value)} | ${esc($('ageGroup').value)} | รอบที่ ${$('round').value}
+      </div>
+    </div>
+  `;
+
+  if (r.domainResult) {
+    html += '<div style="font-weight:700;font-size:13px;color:var(--muted);margin-bottom:6px">ผลรายด้าน</div>';
+    html += '<div class="dsum" style="margin-bottom:12px">';
+    ['GM','FM','RL','EL','PS'].forEach(d => {
+      if (domCnt[d]) {
+        const dr = r.domainResult[d];
+        html += `<div class="dsi ${dr.fail > 0 ? 'no' : 'ok'}"><div class="dl">${d}</div><div class="dc">✅${dr.pass} ❌${dr.fail}</div></div>`;
+      }
+    });
+    html += '</div>';
+  }
+
+  if (r.failItems && r.failItems.length) {
+    html += `<div style="font-size:13px;color:var(--red);margin-bottom:8px">ข้อที่ไม่ผ่าน: ${esc(r.failItems.join(', '))}</div>`;
+  }
+
+  if (r.resultStatus !== 'สมวัย') {
+    const rv = $('round').value;
+    html += `<div class="wf">${
+      rv === '1'
+      ? '<strong>📋 ขั้นตอนต่อไป</strong>ฝึกทักษะในข้อที่ไม่ผ่านบ่อยๆ เป็นเวลา <strong>30 วัน</strong> แล้วนัดประเมินซ้ำ'
+      : '<strong>🔴 ส่งต่อ</strong>ควรส่งต่อหน่วยบริการทุติยภูมิขึ้นไป (รพช./รพท./รพศ.)'
+    }</div>`;
+  }
+
+  $('resultArea').innerHTML = html;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showMsg(txt, type) {
+  const m = $('msgbox');
+  m.textContent = txt;
+  m.className = 'msg on ' + type;
+  m.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ============================================================
+// Reset
+// ============================================================
+function resetAll() {
+  ['p2','p3'].forEach(id => $(id).style.display = 'none');
+  $('p1').style.display = 'block';
+  setStep(1);
+  ['childName','childBirthdate','notes','assessor'].forEach(id => $(id).value = '');
+  $('ageGroup').value = '';
+  $('ageBadge').style.display = 'none';
+  $('keyNotice').classList.remove('on');
+  $('histBox').classList.remove('on');
+  $('ares').classList.remove('on');
+  $('msgbox').className = 'msg';
+  questions = []; answers = {}; answered = 0; ageMonths = null;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
