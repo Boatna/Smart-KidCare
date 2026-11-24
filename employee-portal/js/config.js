@@ -1,5 +1,5 @@
 const CONFIG = {
-  GAS_API_URL: "https://script.google.com/macros/s/AKfycbxTMXz2Ij9qRu9rA8nVg3nHcNX6R0kpMjAQOA7tiXj8Qa18ewBxuE69zOCwH_jcA2nV/exec",
+  GAS_API_URL: "https://script.google.com/macros/s/AKfycbwZ9eXKykgp1Iu8Gn0peWDNsETXy5BsAr38vwd-4MByildIHl40EiZAZppf00uSqGIL/exec",
 
   APP_NAME: "Employee Portal",
   APP_VERSION: "1.0.0",

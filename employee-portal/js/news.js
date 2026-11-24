@@ -613,6 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("emp_portal_youtube_videos", JSON.stringify(newVideos));
           renderYouTubeVideos();
           Utils.showToast(res.message || "บันทึกลิงก์วิดีโอ YouTube ทั้ง 3 ช่องสำเร็จ!", "success");
+          Utils.closeModal("editVideosModal"); // ปิดเฉพาะเมื่อบันทึกสำเร็จ
         } else {
           Utils.showToast((res && res.message) || "บันทึกล้มเหลว: เฉพาะผู้ดูแลระบบเท่านั้น", "danger");
         }
@@ -621,7 +622,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (saveBtn) saveBtn.disabled = false;
-      Utils.closeModal("editVideosModal");
     });
   }
 

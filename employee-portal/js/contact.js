@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // หน้านี้ต้อง Login เท่านั้น (Backend ใช้รหัสพนักงานจาก token)
+  if (!Auth.requireAuth("login.html")) return;
+
   Utils.setupNavbar();
 
   const contactForm = document.getElementById("contactForm");

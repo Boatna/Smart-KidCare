@@ -661,6 +661,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <button class="btn btn-secondary btn-sm" data-empid="${Utils.escapeHtml(user.employeeId)}" onclick="openChangePinModal(this.dataset.empid)" title="เปลี่ยน PIN">
                 ${Utils.getIcon('key')}
               </button>
+              <button class="btn btn-secondary btn-sm" data-empid="${Utils.escapeHtml(user.employeeId)}" onclick="unlockUser(this.dataset.empid)" title="ปลดล็อกการ Login (กรณีใส่ PIN ผิดเกินกำหนด)">
+                🔓
+              </button>
               <button class="btn btn-${isActive ? 'warning' : 'success'} btn-sm" data-empid="${Utils.escapeHtml(user.employeeId)}" data-status="${isActive ? 'Inactive' : 'Active'}" onclick="toggleUserStatus(this.dataset.empid, this.dataset.status)" title="${isActive ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน'}">
                 ${Utils.getIcon('power')}
               </button>
@@ -802,6 +805,20 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         Utils.showToast(res.message || "เปลี่ยนสถานะไม่สำเร็จ", "danger");
         loadAdminUsers();
+      }
+    } catch (e) {
+      Utils.showToast("เกิดข้อผิดพลาด", "danger");
+    }
+  };
+
+  window.unlockUser = async function(empId) {
+    if (!confirm(`ปลดล็อกการเข้าสู่ระบบของรหัสพนักงาน ${empId} ใช่หรือไม่?`)) return;
+    try {
+      const res = await API.post("unlockUser", { employeeId: empId, adminId });
+      if (res.success) {
+        Utils.showToast(res.message || "ปลดล็อกสำเร็จ", "success");
+      } else {
+        Utils.showToast(res.message || "ปลดล็อกไม่สำเร็จ", "danger");
       }
     } catch (e) {
       Utils.showToast("เกิดข้อผิดพลาด", "danger");

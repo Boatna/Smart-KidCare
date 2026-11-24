@@ -31,6 +31,10 @@ const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // Session token อายุ 12 ช
 const MAX_LOGIN_FAILS = 5;                  // ใส่ PIN ผิดได้กี่ครั้ง
 const LOCKOUT_SECONDS = 900;                // ล็อก 15 นาที
 const CONTACT_STATUSES = ["Open", "In Progress", "Closed"];
+const NEWS_CACHE_KEY = "news_active_v1";    // แคชรายการข่าว Active (ลดการอ่านชีตซ้ำๆ จาก polling)
+const NEWS_CACHE_SEC = 300;                 // แคช 5 นาที
+const CONTACT_RATE_MAX = 5;                 // ส่งเรื่องแจ้งปัญหาได้กี่ครั้ง
+const CONTACT_RATE_WINDOW_SEC = 600;        // ภายในกี่วินาที (10 นาที)
 const DEFAULT_VIDEOS = [
   ["yt-1", "หลักสูตรอุปกรณ์คุ้มครองความปลอดภัยส่วนบุคคล", "https://youtu.be/T1CSETUYaEo?si=y0CkQ9_GhPeFtBN-", "แนวทางปฏิบัติตามมาตรฐานความปลอดภัย อาชีวอนามัย และการบริหารจัดการสิ่งแวดล้อมอย่างยั่งยืน", "หลักสูตรแนะนำ", 1, "Active"],
   ["yt-2", "[เรียนรู้ 5ส.] ส.สะดวก", "https://youtu.be/TMy6mko6zHU?si=LcPBYO3ccRQ7m7Yd", "แนวทางปฏิบัติตามมาตรฐานความปลอดภัย อาชีวอนามัย และการบริหารจัดการสิ่งแวดล้อมอย่างยั่งยืน", "เรียนรู้ 5 ส.", 2, "Active"],
@@ -68,6 +72,46 @@ function getSessionSecret_() {
     props.setProperty("SESSION_SECRET", secret);
   }
   return secret;
+}
+
+// ---------------------------------------------------------------------------
+// PIN HASHING (เก็บ PIN เป็น SHA-256 + pepper แทนข้อความธรรมดา)
+// ---------------------------------------------------------------------------
+function getPinPepper_() {
+  const props = PropertiesService.getScriptProperties();
+  let pepper = props.getProperty("PIN_PEPPER");
+  if (!pepper) {
+    pepper = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty("PIN_PEPPER", pepper);
+  }
+  return pepper;
+}
+
+// รัน "ครั้งเดียว" จาก Apps Script Editor ก่อนเปิดใช้งานจริง เพื่อสร้างกุญแจลับ (SESSION_SECRET, PIN_PEPPER)
+// ไว้ล่วงหน้า กันกรณีมีคน Login พร้อมกันครั้งแรกแล้วกุญแจถูกสร้างซ้อนกัน
+function initSecurity() {
+  getSessionSecret_();
+  getPinPepper_();
+  return { success: true, message: "สร้างกุญแจความปลอดภัยเรียบร้อย (SESSION_SECRET, PIN_PEPPER)" };
+}
+
+// ห้ามลบ/เปลี่ยนค่า PIN_PEPPER ใน Script Properties หลังเริ่มใช้งาน มิฉะนั้นทุกคน Login ไม่ได้
+function hashPin_(employeeId, pin) {
+  const raw = getPinPepper_() + "|" + cleanId(employeeId).toLowerCase() + "|" + String(pin);
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  return "h:" + Utilities.base64EncodeWebSafe(digest);
+}
+
+function isHashedPin_(value) {
+  return String(value || "").indexOf("h:") === 0;
+}
+
+function loginFailKey_(employeeId) {
+  return "loginfail_" + cleanId(employeeId).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+}
+
+function clearNewsCache_() {
+  try { CacheService.getScriptCache().remove(NEWS_CACHE_KEY); } catch (e) {}
 }
 
 function signSession_(employeeId) {
@@ -508,7 +552,7 @@ function doPost(e) {
 
     // ---- ป้องกันการเขียนชนกัน (Race Condition) ----
     let lock = null;
-    if (action !== "login") {
+    if (["login", "submitContact"].indexOf(action) === -1) {
       lock = LockService.getScriptLock();
       lock.waitLock(20000);
     }
@@ -543,6 +587,7 @@ function dispatchPost_(action, payload) {
     case "updateUser": return handleUpdateUser(payload);
     case "changePin": return handleChangePin(payload);
     case "toggleUserStatus": return handleToggleUserStatus(payload);
+    case "unlockUser": return handleUnlockUser(payload);
     case "updateContactStatus": return handleUpdateContactStatus(payload);
     case "updateVideos": return handleUpdateVideos(payload);
     case "uploadNewsImage": return handleUploadNewsImage(payload);
@@ -569,7 +614,7 @@ function handleLogin(payload) {
 
   // ป้องกันการเดา PIN (Brute-force): ผิดครบ MAX_LOGIN_FAILS ครั้ง ล็อก 15 นาที
   const cache = CacheService.getScriptCache();
-  const failKey = "loginfail_" + employeeId.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+  const failKey = loginFailKey_(employeeId);
   const failCount = Number(cache.get(failKey) || 0);
   if (failCount >= MAX_LOGIN_FAILS) {
     recordLoginLog(employeeId, "Unknown", clientIp, "Failed (Locked)");
@@ -620,11 +665,19 @@ function handleLogin(payload) {
     employeeFound = true;
     if (employeeName === "Unknown") employeeName = row[nameCol] || "Unknown";
 
-    const pinMatches = rowPin !== "" && (
-      (rowPin === pin) ||
-      (rowPin.length < 4 && rowPin.padStart(4, "0") === pin) ||
-      (pin.length < 4 && pin.padStart(4, "0") === rowPin)
-    );
+    let pinMatches = false;
+    let needsHashUpgrade = false;
+    if (rowPin !== "") {
+      if (isHashedPin_(rowPin)) {
+        pinMatches = (rowPin === hashPin_(rowEmpId, pin));
+      } else {
+        // PIN แบบเก่า (ข้อความธรรมดา) ยังใช้ได้ แล้วจะถูกอัปเกรดเป็น hash อัตโนมัติ
+        pinMatches = (rowPin === pin) ||
+          (rowPin.length < 4 && rowPin.padStart(4, "0") === pin) ||
+          (pin.length < 4 && pin.padStart(4, "0") === rowPin);
+        needsHashUpgrade = pinMatches;
+      }
+    }
 
     if (pinMatches) {
       matchedUser = {
@@ -635,6 +688,9 @@ function handleLogin(payload) {
         plant: plantCol !== -1 ? (row[plantCol] || "") : "",
         status: statusCol !== -1 ? String(row[statusCol] || "Active").trim() : "Active"
       };
+      if (needsHashUpgrade) {
+        try { usersSheet.getRange(i + 1, pinCol + 1).setNumberFormat("@").setValue(hashPin_(rowEmpId, pin)); } catch (e) {}
+      }
       break;
     }
   }
@@ -730,6 +786,21 @@ function recordAdminLog(adminId, action, detail) {
 }
 
 function getNewsData(params) {
+  const wantsActiveOnly = !(params && params.all === "true");
+  if (wantsActiveOnly) {
+    try {
+      const hit = CacheService.getScriptCache().get(NEWS_CACHE_KEY);
+      if (hit) return JSON.parse(hit);
+    } catch (e) {}
+  }
+  const result = getNewsDataUncached_(params);
+  if (wantsActiveOnly && result && result.success) {
+    try { CacheService.getScriptCache().put(NEWS_CACHE_KEY, JSON.stringify(result), NEWS_CACHE_SEC); } catch (e) {} // เกิน 100KB จะข้ามเอง
+  }
+  return result;
+}
+
+function getNewsDataUncached_(params) {
   const ss = getDB();
   const sheet = ss.getSheetByName("News");
   if (!sheet) return { success: true, data: [] };
@@ -839,15 +910,16 @@ function getNewsByIdData(id) {
   return { success: false, message: "News not found" };
 }
 
+function defaultVideosList_() {
+  return DEFAULT_VIDEOS.map(v => ({
+    id: v[0], title: v[1], url: v[2], description: v[3], category: v[4], order: v[5], status: v[6]
+  }));
+}
+
 function getVideosData(params) {
   const ss = getDB();
-  let sheet = ss.getSheetByName("Videos");
-  if (!sheet) {
-    sheet = ss.insertSheet("Videos");
-    sheet.appendRow(SHEET_HEADERS.Videos);
-    formatHeaderRow(sheet);
-    DEFAULT_VIDEOS.forEach(v => sheet.appendRow(v));
-  }
+  const sheet = ss.getSheetByName("Videos");
+  if (!sheet) return { success: true, data: defaultVideosList_() };
 
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) return { success: true, data: [] };
@@ -1090,6 +1162,7 @@ function handleAddNews(payload) {
 
   recordAdminLog(payload.adminId, "Create News", `Added News ID: ${id} - Title: ${title}`);
   if (String(status).toLowerCase() === "active") sendPushNotification_(title, detail, id);
+  clearNewsCache_();
   return { success: true, message: "เพิ่มข่าวสารสำเร็จ", id: id };
 }
 
@@ -1102,7 +1175,7 @@ function handleSavePushToken(payload) {
       sheet.appendRow(SHEET_HEADERS.PushSubscriptions);
       formatHeaderRow(sheet);
     }
-    const empId = String(payload._sessionId || payload.empId || "GUEST").slice(0, 30);
+    const empId = String(payload._sessionId || "GUEST").slice(0, 30);
     const subscription = String(payload.subscription || "").slice(0, 4000);
 
     // กันบันทึกซ้ำ (พนักงาน + อุปกรณ์เดิม)
@@ -1206,6 +1279,7 @@ function handleUpdateNews(payload) {
       if (payload.url !== undefined && urlCol !== -1) sheet.getRange(rowIndex, urlCol + 1).setValue(safeCell_(payload.url));
 
       recordAdminLog(payload.adminId, "Update News", `Updated News ID: ${id} - Title: ${payload.title || data[i][titleCol]}`);
+      clearNewsCache_();
       return { success: true, message: "อัปเดตข่าวสารสำเร็จ" };
     }
   }
@@ -1232,6 +1306,7 @@ function handleDeleteNews(payload) {
       const newsTitle = titleCol !== -1 ? data[i][titleCol] : "";
       sheet.deleteRow(i + 1);
       recordAdminLog(payload.adminId, "Delete News", `Deleted News ID: ${id} - Title: ${newsTitle}`);
+      clearNewsCache_();
       return { success: true, message: "ลบข่าวสารเรียบร้อยแล้ว" };
     }
   }
@@ -1580,7 +1655,7 @@ function handleAddUser(payload) {
     else if (h === "department") newRow[idx] = department;
     else if (h === "position") newRow[idx] = position;
     else if (h === "plant") newRow[idx] = plant;
-    else if (h === "pin" || h === "password") newRow[idx] = pin;
+    else if (h === "pin" || h === "password") newRow[idx] = hashPin_(employeeId, pin);
     else if (h === "status") newRow[idx] = status;
   });
 
@@ -1629,7 +1704,7 @@ function handleUpdateUser(payload) {
       if (payload.department !== undefined && deptCol !== -1) sheet.getRange(rowIndex, deptCol + 1).setValue(safeCell_(payload.department));
       if (payload.position !== undefined && posCol !== -1) sheet.getRange(rowIndex, posCol + 1).setValue(safeCell_(payload.position));
       if (payload.plant !== undefined && plantCol !== -1) sheet.getRange(rowIndex, plantCol + 1).setValue(safeCell_(payload.plant));
-      if (payload.pin !== undefined && pinCol !== -1) sheet.getRange(rowIndex, pinCol + 1).setValue(cleanId(payload.pin));
+      if (payload.pin !== undefined && pinCol !== -1) sheet.getRange(rowIndex, pinCol + 1).setNumberFormat("@").setValue(hashPin_(rowEmpId, cleanId(payload.pin)));
       clearUserActiveCache_(employeeId);
       if (payload.status !== undefined && statusCol !== -1) sheet.getRange(rowIndex, statusCol + 1).setValue(safeCell_(payload.status));
 
@@ -1673,7 +1748,8 @@ function handleChangePin(payload) {
     const rowEmpId = cleanId(data[i][empIdCol]);
     if (rowEmpId === employeeId || (rowEmpId.replace(/^0+/, "") === employeeId.replace(/^0+/, ""))) {
       const rowIndex = i + 1;
-      sheet.getRange(rowIndex, pinCol + 1).setValue(newPin);
+      sheet.getRange(rowIndex, pinCol + 1).setNumberFormat("@").setValue(hashPin_(rowEmpId, newPin));
+      try { CacheService.getScriptCache().remove(loginFailKey_(rowEmpId)); } catch (e) {} // เปลี่ยน PIN แล้วปลดล็อกให้ด้วย
       recordAdminLog(payload.adminId, "Change PIN", `Changed PIN for Employee: ${employeeId}`);
       return { success: true, message: "เปลี่ยน PIN สำเร็จแล้ว" };
     }
@@ -1726,6 +1802,14 @@ function handleToggleUserStatus(payload) {
   return { success: false, message: "ไม่พบผู้ใช้ที่ระบุ" };
 }
 
+function handleUnlockUser(payload) {
+  const employeeId = cleanId(payload.employeeId);
+  if (!employeeId) return { success: false, message: "ไม่พบรหัสพนักงาน" };
+  try { CacheService.getScriptCache().remove(loginFailKey_(employeeId)); } catch (e) {}
+  recordAdminLog(payload.adminId, "Unlock User", `Unlocked login for Employee: ${employeeId}`);
+  return { success: true, message: "ปลดล็อกการเข้าสู่ระบบสำเร็จ" };
+}
+
 function handleToggleStatus(sheetName, id, status, adminId) {
   if (["News", "Apps"].indexOf(sheetName) === -1) return { success: false, message: "Invalid sheet" };
   if (["active", "inactive"].indexOf(String(status).toLowerCase()) === -1) return { success: false, message: "สถานะไม่ถูกต้อง" };
@@ -1749,6 +1833,7 @@ function handleToggleStatus(sheetName, id, status, adminId) {
       const rowIndex = i + 1;
       sheet.getRange(rowIndex, statusCol + 1).setValue(status);
       recordAdminLog(adminId, `Toggle ${sheetName} Status`, `Changed status of ${sheetName} ID ${id} to ${status}`);
+      if (sheetName === "News") clearNewsCache_();
       return { success: true, message: `เปลี่ยนสถานะเป็น ${status} สำเร็จ` };
     }
   }
@@ -1762,8 +1847,11 @@ function handleContactSubmit(payload) {
   if (!sheet) return { success: false, message: "ContactRequest sheet not found" };
 
   const id = "REQ" + new Date().getTime().toString().slice(-6);
-  // ถ้า Login อยู่ ใช้รหัสพนักงานจาก token (กันการปลอมตัวส่งเรื่องแทนคนอื่น)
-  const employeeId = cleanId(payload._sessionId || payload.employeeId || "").slice(0, 30);
+  // ต้อง Login เท่านั้น: ใช้รหัสพนักงานจาก token (กันการปลอมตัวส่งเรื่องแทนคนอื่น)
+  const employeeId = cleanId(payload._sessionId || "").slice(0, 30);
+  if (!employeeId || !isUserActive_(employeeId)) {
+    return { success: false, code: "AUTH_REQUIRED", message: "กรุณาเข้าสู่ระบบก่อนส่งเรื่อง" };
+  }
   const name = String(payload.name || "").trim().slice(0, 100);
   const topic = String(payload.topic || "").trim().slice(0, 200);
   const detail = String(payload.detail || "").trim().slice(0, 2000);
@@ -1773,6 +1861,15 @@ function handleContactSubmit(payload) {
   if (!employeeId || !topic || !detail) {
     return { success: false, message: "กรุณากรอกข้อมูลให้ครบถ้วน" };
   }
+
+  // จำกัดความถี่การส่งเรื่อง กันสแปม
+  const rlCache = CacheService.getScriptCache();
+  const rlKey = "contactrl_" + employeeId.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+  const rlCount = Number(rlCache.get(rlKey) || 0);
+  if (rlCount >= CONTACT_RATE_MAX) {
+    return { success: false, message: "ส่งเรื่องบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง" };
+  }
+  rlCache.put(rlKey, String(rlCount + 1), CONTACT_RATE_WINDOW_SEC);
 
   ensureSheetHeaders_(sheet, SHEET_HEADERS.ContactRequest);
 
@@ -1934,35 +2031,33 @@ function getAdminLogsData(params) {
 
 function getDashboardStatsData() {
   const ss = getDB();
-  const countFilledRows = (sheetName) => {
+  const countRows = (sheetName, onlyActive) => {
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return 0;
 
     const values = sheet.getDataRange().getValues();
+    if (values.length <= 1) return 0;
+
+    const headers = values[0].map(normalizeHeader_);
+    const statusCol = onlyActive ? headers.indexOf("status") : -1;
     let count = 0;
     for (let i = 1; i < values.length; i++) {
       const firstCell = values[i][0];
-      if (firstCell !== null && firstCell !== undefined && String(firstCell).trim() !== "") {
-        count++;
-      }
+      if (firstCell === null || firstCell === undefined || String(firstCell).trim() === "") continue;
+      if (statusCol !== -1 && String(values[i][statusCol] || "Active").trim().toLowerCase() !== "active") continue;
+      count++;
     }
     return count;
   };
 
-  const usersCount = countFilledRows("Users");
-  const newsCount = countFilledRows("News");
-  const appsCount = countFilledRows("Apps");
-  const contactCount = countFilledRows("ContactRequest");
-  const loginCount = countFilledRows("LoginLog");
-
   return {
     success: true,
     stats: {
-      users: usersCount,
-      news: newsCount,
-      apps: appsCount,
-      contacts: contactCount,
-      logins: loginCount
+      users: countRows("Users", false),      // ผู้ใช้งานทั้งหมด
+      news: countRows("News", true),         // ข่าวที่เผยแพร่ (Active)
+      apps: countRows("Apps", true),         // แอปที่เปิดใช้งาน (Active)
+      contacts: countRows("ContactRequest", false),
+      logins: countRows("LoginLog", false)
     }
   };
 }
@@ -1973,9 +2068,9 @@ function setupInitialDatabase() {
   if (!usersSheet) {
     usersSheet = ss.insertSheet("Users");
     usersSheet.appendRow(SHEET_HEADERS.Users);
-    usersSheet.appendRow(["1673231", "นาย ปฏิพล พึ่งพังเทียม", "งานไอที", "IT Support", "Tasaki", "1234", "Active"]);
-    usersSheet.appendRow(["1540524", "นางสาว สุภาวดี เสนาะเสียง", "บัญชี", "เจ้าหน้าที่บัญชี", "Tasaki", "1234", "Active"]);
-    usersSheet.appendRow(["3630169", "นาย เชิดศักดิ์ พรหมคุปต์", "แผนกประกอบแอร์", "ผู้จัดการฝ่าย", "Thai tasaki engineering co. ltd", "1234", "Active"]);
+    // ข้อมูลตัวอย่างเท่านั้น (PIN เริ่มต้น 1234) — เปลี่ยน PIN และแก้รายชื่อจริงใน Sheet ทันทีหลังติดตั้ง
+    usersSheet.appendRow(["10001", "Admin ตัวอย่าง", "งานไอที", "IT Support", "Tasaki", hashPin_("10001", "1234"), "Active"]);
+    usersSheet.appendRow(["10002", "พนักงาน ตัวอย่าง", "แผนกประกอบแอร์", "พนักงาน", "Tasaki", hashPin_("10002", "1234"), "Active"]);
     formatHeaderRow(usersSheet);
   }
 
@@ -1983,8 +2078,7 @@ function setupInitialDatabase() {
   if (!adminSheet) {
     adminSheet = ss.insertSheet("Admin");
     adminSheet.appendRow(["EmployeeID", "Name", "Role", "Status"]);
-    adminSheet.appendRow(["1673231", "นาย ปฏิพล พึ่งพังเทียม", "admin", "Active"]);
-    adminSheet.appendRow(["1540524", "นางสาว สุภาวดี เสนาะเสียง", "admin", "Active"]);
+    adminSheet.appendRow(["10001", "Admin ตัวอย่าง", "admin", "Active"]);
     formatHeaderRow(adminSheet);
   }
 
@@ -2059,7 +2153,7 @@ function setupInitialDatabase() {
   if (!contactSheet) {
     contactSheet = ss.insertSheet("ContactRequest");
     contactSheet.appendRow(["ID", "EmployeeID", "Name", "Topic", "Detail", "CreatedDate", "Status"]);
-    contactSheet.appendRow(["REQ001", "3630169", "นาย เชิดศักดิ์ พรหมคุปต์", "ขอสิทธิ์เข้าใช้งานระบบ MES", "ต้องการขอสิทธิ์เข้าใช้งาน MES ในส่วนของ Line 4 กะเช้าครับ", "2026-11-16 09:30:00", "Open"]);
+    contactSheet.appendRow(["REQ001", "10002", "พนักงาน ตัวอย่าง", "ขอสิทธิ์เข้าใช้งานระบบ MES", "ต้องการขอสิทธิ์เข้าใช้งาน MES ในส่วนของ Line 4 กะเช้าครับ", "2026-11-16 09:30:00", "Open"]);
     formatHeaderRow(contactSheet);
   }
 
@@ -2075,6 +2169,34 @@ function setupInitialDatabase() {
   migrateDatabaseSchema();
 
   return { success: true, message: "สร้างฐานข้อมูล Google Sheets และใส่ Seed Data เรียบร้อยแล้ว!" };
+}
+
+// รันครั้งเดียวจาก Apps Script Editor (เลือกฟังก์ชันนี้ แล้วกด Run) เพื่อแปลง PIN เดิมทั้งชีตเป็น hash ทันที
+// ถ้าไม่รัน PIN เดิมของแต่ละคนจะถูกแปลงเองเมื่อเขาเข้าสู่ระบบสำเร็จครั้งถัดไป
+function migratePinsToHash() {
+  const sheet = getDB().getSheetByName("Users");
+  if (!sheet) return { success: false, message: "Users sheet not found" };
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return { success: true, message: "ไม่มีข้อมูลผู้ใช้" };
+
+  const headers = data[0].map(normalizeHeader_);
+  const empIdCol = headers.indexOf("employeeid") !== -1 ? headers.indexOf("employeeid") : 0;
+  const pinCol = findPinColumn_(headers);
+  if (pinCol === -1) return { success: false, message: "ไม่พบคอลัมน์ PIN ใน Sheet Users" };
+
+  let converted = 0;
+  for (let i = 1; i < data.length; i++) {
+    const id = cleanId(data[i][empIdCol]);
+    const pin = cleanId(data[i][pinCol]);
+    if (!id || !pin || isHashedPin_(pin) || !/^\d{1,4}$/.test(pin)) continue;
+    const normalized = pin.padStart(4, "0");
+    sheet.getRange(i + 1, pinCol + 1).setNumberFormat("@").setValue(hashPin_(id, normalized));
+    converted++;
+  }
+  const msg = "แปลง PIN เป็น hash แล้ว " + converted + " บัญชี";
+  Logger.log(msg);
+  return { success: true, message: msg };
 }
 
 function formatHeaderRow(sheet) {
