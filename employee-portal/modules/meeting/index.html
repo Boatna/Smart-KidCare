@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจองห้องประชุม | Employee Portal</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="../../apps.html" class="brand">
+        <div class="brand-icon">←</div>
+        <span>กลับสู่ Employee Portal</span>
+      </a>
+      <div class="user-badge">
+        <span style="font-size: 0.85rem; font-weight: 600;">Meeting Rooms Booking</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 800px;">
+    <div class="page-header">
+      <h1 class="page-title">👥 ระบบจองห้องประชุม (Meeting Rooms)</h1>
+      <p class="page-subtitle">ค้นหาห้องประชุมที่ว่าง ตรวจสอบอุปกรณ์ และจองการประชุม</p>
+    </div>
+
+    <div class="card" style="padding: 2rem;">
+      <form onsubmit="event.preventDefault(); alert('จองห้องประชุมสำเร็จ! ระบบได้ส่งอีเมลยืนยันให้ท่านแล้ว'); window.location.href='../../apps.html';">
+        <div class="form-group">
+          <label class="form-label">เลือกห้องประชุม</label>
+          <select class="form-control" required>
+            <option value="A1">ห้องประชุมใหญ่ Horizon (ชั้น 3 - รองรับ 20 คน, TV, Video Conference)</option>
+            <option value="B2">ห้องประชุม Synergy (ชั้น 2 - รองรับ 10 คน, Whiteboard)</option>
+            <option value="C1">ห้องประชุม Focus Room 1 (ชั้น 1 - รองรับ 4 คน)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">หัวข้อการประชุม</label>
+          <input type="text" class="form-control" placeholder="เช่น ประชุมวางแผนประจำสัปดาห์ ทีม Production" required>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">วันที่</label>
+            <input type="date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ช่วงเวลา</label>
+            <select class="form-control">
+              <option>09:00 - 10:00 น.</option>
+              <option>10:00 - 11:30 น.</option>
+              <option>13:30 - 15:00 น.</option>
+              <option>15:00 - 16:30 น.</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+          <a href="../../apps.html" class="btn btn-secondary">ยกเลิก</a>
+          <button type="submit" class="btn btn-primary">ยืนยันการจอง</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <script src="../../js/theme-seasonal.js"></script>
+</body>
+</html>

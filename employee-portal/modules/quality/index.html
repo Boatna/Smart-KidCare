@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบตรวจสอบคุณภาพ (QA Inspection) | Employee Portal</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="../../apps.html" class="brand">
+        <div class="brand-icon">←</div>
+        <span>กลับสู่ Employee Portal</span>
+      </a>
+      <div class="user-badge">
+        <span style="font-size: 0.85rem; font-weight: 600;">QA & QC Digital System</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 800px;">
+    <div class="page-header">
+      <h1 class="page-title">📋 ระบบตรวจสอบและบันทึกคุณภาพชิ้นงาน</h1>
+      <p class="page-subtitle">บันทึกผลการตรวจสอบ Sampling ตามมาตรฐาน AQL และรายงาน Defect</p>
+    </div>
+
+    <div class="card" style="padding: 2rem;">
+      <form onsubmit="event.preventDefault(); alert('บันทึกผลการตรวจสอบคุณภาพสำเร็จ ข้อมูลถูกส่งเข้าฐานข้อมูล QA เรียบร้อย'); window.location.href='../../apps.html';">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Lot / Batch Number</label>
+            <input type="text" class="form-control" placeholder="เช่น LOT-2026-11-B" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ไลน์การผลิต</label>
+            <select class="form-control">
+              <option>Line 1 (Assembly)</option>
+              <option>Line 2 (Molding)</option>
+              <option>Line 3 (Packaging)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">จำนวนสุ่มตรวจ (Sample Size)</label>
+            <input type="number" class="form-control" value="50" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ผลการตัดสิน</label>
+            <select class="form-control" required>
+              <option value="PASS">ผ่านการตรวจสอบ (PASS)</option>
+              <option value="HOLD">กักกันชิ้นงาน (HOLD)</option>
+              <option value="REJECT">ปฏิเสธชิ้นงาน (REJECT)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">บันทึกข้อบกพร่องที่พบ (ถ้ามี)</label>
+          <textarea class="form-control" rows="3" placeholder="ระบุอาการข้อบกพร่อง รอยขีดข่วน ขนาดผิดสเปก ฯลฯ"></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+          <a href="../../apps.html" class="btn btn-secondary">ยกเลิก</a>
+          <button type="submit" class="btn btn-primary">บันทึกผลการตรวจ</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <script src="../../js/theme-seasonal.js"></script>
+</body>
+</html>

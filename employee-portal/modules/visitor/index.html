@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบลงทะเบียนผู้มาติดต่อ | Employee Portal</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="../../apps.html" class="brand">
+        <div class="brand-icon">←</div>
+        <span>กลับสู่ Employee Portal</span>
+      </a>
+      <div class="user-badge">
+        <span style="font-size: 0.85rem; font-weight: 600;">Visitor Management System</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 800px;">
+    <div class="page-header">
+      <h1 class="page-title">🛡️ ระบบลงทะเบียนและแจ้งนัดหมายผู้มาติดต่อ</h1>
+      <p class="page-subtitle">ลงทะเบียนล่วงหน้าสำหรับคู่ค้า ผู้ตรวจการ หรือแขกภายนอกที่เข้ามาในเขตโรงงาน</p>
+    </div>
+
+    <div class="card" style="padding: 2rem;">
+      <form onsubmit="event.preventDefault(); alert('บันทึกข้อมูลนัดหมายผู้มาติดต่อเรียบร้อยแล้ว QR Code ถูกสร้างส่งไปยังป้อม รปภ.'); window.location.href='../../apps.html';">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">ชื่อผู้มาติดต่อ</label>
+            <input type="text" class="form-control" placeholder="ชื่อ-นามสกุล" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">บริษัท/องค์กร</label>
+            <input type="text" class="form-control" placeholder="ชื่อบริษัทผู้มาติดต่อ" required>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">วันที่เข้าพบ</label>
+            <input type="date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ทะเบียนรถ (ถ้ามี)</label>
+            <input type="text" class="form-control" placeholder="เช่น 1กก 1234 กทม.">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">วัตถุประสงค์การเข้าพบ</label>
+          <input type="text" class="form-control" placeholder="เช่น เสนองาน, ตรวจสอบงานติดตั้งระบบ, ส่งสินค้า" required>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+          <a href="../../apps.html" class="btn btn-secondary">ยกเลิก</a>
+          <button type="submit" class="btn btn-primary">ลงทะเบียนผู้มาติดต่อ</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <script src="../../js/theme-seasonal.js"></script>
+</body>
+</html>

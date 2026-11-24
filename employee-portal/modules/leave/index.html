@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบยื่นใบลาออนไลน์ (Leave Request) | Employee Portal</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="../../apps.html" class="brand">
+        <div class="brand-icon">←</div>
+        <span>กลับสู่ Employee Portal</span>
+      </a>
+      <div class="user-badge" id="leaveUserBadge">
+        <span style="font-size: 0.85rem; font-weight: 600;">ระบบยื่นใบลาออนไลน์</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 800px;">
+    <div class="page-header">
+      <h1 class="page-title">📅 ระบบยื่นขออนุมัติการลา (Leave Management)</h1>
+      <p class="page-subtitle">ตรวจสอบวันลาคงเหลือ และส่งคำขอลาพักร้อน ลาป่วย หรือลากิจ</p>
+    </div>
+
+    <!-- Leave Balance Card -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-info">
+          <span class="stat-label">ลาพักร้อนคงเหลือ</span>
+          <span class="stat-value" style="color: var(--primary);">8 วัน</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <span class="stat-label">ลาป่วยคงเหลือ</span>
+          <span class="stat-value" style="color: var(--success);">28 วัน</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <span class="stat-label">ลากิจคงเหลือ</span>
+          <span class="stat-value" style="color: var(--warning);">3 วัน</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 2rem;">
+      <h3 style="margin-bottom: 1.5rem;">ยื่นแบบฟอร์มขอลา</h3>
+      <form onsubmit="event.preventDefault(); alert('ยื่นคำขอลาเรียบร้อยแล้ว คำขอถูกส่งไปยังผู้บังคับบัญชา'); window.location.href='../../apps.html';">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">ประเภทการลา</label>
+            <select class="form-control" required>
+              <option value="พักร้อน">ลาพักร้อน (Annual Leave)</option>
+              <option value="ป่วย">ลาป่วย (Sick Leave)</option>
+              <option value="กิจธุระ">ลากิจธุระ (Personal Leave)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">จำนวนวัน</label>
+            <input type="number" step="0.5" min="0.5" value="1" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">ตั้งแต่วันที่</label>
+            <input type="date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ถึงวันที่</label>
+            <input type="date" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">เหตุผลการลา</label>
+          <textarea class="form-control" rows="3" placeholder="ระบุเหตุผลในการลา..."></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+          <a href="../../apps.html" class="btn btn-secondary">ยกเลิก</a>
+          <button type="submit" class="btn btn-primary">ส่งใบลา</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <script src="../../js/theme-seasonal.js"></script>
+</body>
+</html>

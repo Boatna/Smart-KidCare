@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ | Employee Portal</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284C7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BW Portal">
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="login-page">
+
+  <div class="login-card animate-scale-in" id="loginCard">
+    <div class="login-header">
+      <img src="assets/icons/app-icon.png" alt="BW Mascot Logo" class="login-brand-img">
+      <h1 class="login-title">Employee Portal</h1>
+      <p class="login-subtitle">ระบบพอร์ทัลบริการพนักงานภายในองค์กร</p>
+    </div>
+
+    <!-- Error Alert Box with shake animation -->
+    <div id="loginAlert" class="login-alert animate-fade-in" role="alert">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="loginAlertMessage">ข้อผิดพลาด</span>
+    </div>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="form-group">
+        <label for="empId" class="form-label">รหัสพนักงาน (Employee ID)</label>
+        <div class="input-icon-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <input type="text" id="empId" class="form-control" placeholder="เช่น 1673231" required autofocus>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="text-align: center;">รหัสผ่าน PIN 4 หลัก</label>
+        <div class="pin-input-group" id="pinGroup">
+          <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin1" required autocomplete="one-time-code">
+          <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin2" required>
+          <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin3" required>
+          <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin4" required>
+        </div>
+        <input type="hidden" id="fullPin" name="pin">
+      </div>
+
+      <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; height: 46px;">
+        <span>เข้าสู่ระบบ</span>
+      </button>
+    </form>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/theme-seasonal.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pwa.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // If already logged in, redirect to index
+      if (Auth.isLoggedIn()) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      const loginCard = document.getElementById("loginCard");
+      const loginForm = document.getElementById("loginForm");
+      const empIdInput = document.getElementById("empId");
+      const pinGroup = document.getElementById("pinGroup");
+      const pinDigits = [
+        document.getElementById("pin1"),
+        document.getElementById("pin2"),
+        document.getElementById("pin3"),
+        document.getElementById("pin4")
+      ];
+      const btnLogin = document.getElementById("btnLogin");
+      const loginAlert = document.getElementById("loginAlert");
+      const loginAlertMessage = document.getElementById("loginAlertMessage");
+
+      // Auto-jump & visual highlight
+      pinDigits.forEach((input, index) => {
+        input.addEventListener("input", (e) => {
+          const val = e.target.value.replace(/\D/g, "");
+          e.target.value = val;
+          if (val) {
+            input.classList.add("filled");
+            if (index < 3) {
+              pinDigits[index + 1].focus();
+            }
+          } else {
+            input.classList.remove("filled");
+          }
+        });
+
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace" && !input.value && index > 0) {
+            pinDigits[index - 1].focus();
+            pinDigits[index - 1].classList.remove("filled");
+          } else if (e.key === "ArrowLeft" && index > 0) {
+            pinDigits[index - 1].focus();
+          } else if (e.key === "ArrowRight" && index < 3) {
+            pinDigits[index + 1].focus();
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            loginForm.dispatchEvent(new Event("submit", { cancelable: true }));
+          } else if (e.key.length === 1 && !/^\d$/.test(e.key)) {
+            // Block non-numeric printable characters (ไม่บล็อกคีย์พิเศษ/คีย์บอร์ดมือถือที่ส่ง "Unidentified")
+            if (!e.ctrlKey && !e.metaKey) {
+              e.preventDefault();
+            }
+          }
+        });
+
+        // Paste support
+        input.addEventListener("paste", (e) => {
+          e.preventDefault();
+          const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+          if (pasted.length >= 4) {
+            pinDigits.forEach((digitInput, idx) => {
+              digitInput.value = pasted[idx] || "";
+              if (pasted[idx]) digitInput.classList.add("filled");
+            });
+            pinDigits[3].focus();
+          }
+        });
+      });
+
+      function showError(msg) {
+        loginAlertMessage.innerText = msg;
+        loginAlert.style.display = "flex";
+
+        // Trigger shake effect on the card
+        loginCard.classList.remove("shake");
+        void loginCard.offsetWidth; // Trigger reflow
+        loginCard.classList.add("shake");
+      }
+
+      function hideError() {
+        loginAlert.style.display = "none";
+      }
+
+      // แจ้งเตือนเมื่อถูกพากลับมาเพราะเซสชันหมดอายุ
+      try {
+        if (sessionStorage.getItem("session_expired")) {
+          sessionStorage.removeItem("session_expired");
+          showError("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
+        }
+      } catch (err) {}
+
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hideError();
+
+        const employeeId = empIdInput.value.trim();
+        const pin = pinDigits.map(d => d.value.trim()).join("");
+
+        // Validations
+        if (!employeeId) {
+          showError("กรุณากรอกรหัสพนักงาน (Employee ID)");
+          empIdInput.focus();
+          return;
+        }
+
+        if (pin.length !== 4) {
+          showError("กรุณากรอกรหัส PIN ให้ครบ 4 หลัก");
+          pinDigits[0].focus();
+          return;
+        }
+
+        // Loading state
+        btnLogin.disabled = true;
+        btnLogin.innerHTML = `<span class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></span> กำลังตรวจสอบ...`;
+
+        try {
+          const clientIp = await Auth.getClientIp();
+          const response = await API.post("login", {
+            employeeId,
+            pin,
+            ip: clientIp
+          });
+
+          if (response && response.success && response.user) {
+            Auth.saveSession(response.user);
+            Utils.showToast("เข้าสู่ระบบสำเร็จ กำลังนำท่านเข้าสู่พอร์ทัล...", "success");
+            setTimeout(() => {
+              window.location.href = "index.html";
+            }, 600);
+          } else {
+            showError(response.message || "รหัสพนักงานหรือ PIN ไม่ถูกต้อง");
+            // Clear PIN
+            pinDigits.forEach(d => {
+              d.value = "";
+              d.classList.remove("filled");
+            });
+            pinDigits[0].focus();
+          }
+        } catch (err) {
+          showError("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง");
+        } finally {
+          btnLogin.disabled = false;
+          btnLogin.innerHTML = `<span>เข้าสู่ระบบ</span>`;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
