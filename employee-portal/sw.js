@@ -1,4 +1,4 @@
-const CACHE_NAME = "emp-portal-v2.3";
+const CACHE_NAME = "emp-portal-v2.4";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -13,6 +13,7 @@ const ASSETS_TO_CACHE = [
   "./js/api.js",
   "./js/theme-seasonal.js",
   "./js/news.js",
+  "./js/quickapps.js",
   "./js/apps.js",
   "./js/contact.js",
   "./js/admin.js",

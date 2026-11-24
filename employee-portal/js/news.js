@@ -476,7 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
     youtubeGrid.innerHTML = slots.map((item, idx) => {
       const embedUrl = Utils.getYouTubeEmbedUrl(item.url);
       const videoId = Utils.extractYouTubeId(item.url);
-      const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : (item.url || "https://www.youtube.com");
+      const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : (Utils.safeUrl(item.url) || "https://www.youtube.com");
       const slotNum = idx + 1;
 
       return `

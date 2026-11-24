@@ -96,10 +96,39 @@ function initSecurity() {
 }
 
 // ห้ามลบ/เปลี่ยนค่า PIN_PEPPER ใน Script Properties หลังเริ่มใช้งาน มิฉะนั้นทุกคน Login ไม่ได้
+function normIdForHash_(employeeId) {
+  const s = cleanId(employeeId).toLowerCase();
+  return /^\d+$/.test(s) ? (s.replace(/^0+/, "") || "0") : s;
+}
+
+// ใช้ ID แบบ normalize (ตัด 0 นำหน้าของรหัสที่เป็นตัวเลขล้วน) เพราะ Google Sheets มักแปลง "01234" เป็นเลข 1234
 function hashPin_(employeeId, pin) {
+  const raw = getPinPepper_() + "|" + normIdForHash_(employeeId) + "|" + String(pin);
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  return "h:" + Utilities.base64EncodeWebSafe(digest);
+}
+
+// สูตรเดิม (ก่อนแก้) ไว้ตรวจ hash เก่า แล้วระบบจะอัปเกรดเป็นสูตรใหม่ให้อัตโนมัติเมื่อ Login สำเร็จ
+function hashPinLegacy_(employeeId, pin) {
   const raw = getPinPepper_() + "|" + cleanId(employeeId).toLowerCase() + "|" + String(pin);
   const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
   return "h:" + Utilities.base64EncodeWebSafe(digest);
+}
+
+// สร้าง ID ไม่ซ้ำ: prefix + วันเวลา(วินาที) + เลขสุ่ม 3 หลัก (เดิมใช้ 5-6 หลักท้ายของ timestamp ซึ่งวนซ้ำทุก ~16 นาที)
+function genId_(prefix) {
+  const stamp = Utilities.formatDate(new Date(), TZ, "yyMMddHHmmss");
+  const rand = Math.floor(Math.random() * 900) + 100;
+  return prefix + stamp + rand;
+}
+
+// เทียบรหัสพนักงาน: ตัวเลขล้วนเทียบแบบตัด 0 นำหน้า / ตัวอักษรเทียบแบบไม่สนตัวพิมพ์
+function sameEmpId_(a, b) {
+  const x = cleanId(a).toLowerCase();
+  const y = cleanId(b).toLowerCase();
+  if (!x || !y) return false;
+  if (x === y) return true;
+  return /^\d+$/.test(x) && /^\d+$/.test(y) && x.replace(/^0+/, "") === y.replace(/^0+/, "");
 }
 
 function isHashedPin_(value) {
@@ -107,7 +136,21 @@ function isHashedPin_(value) {
 }
 
 function loginFailKey_(employeeId) {
-  return "loginfail_" + cleanId(employeeId).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+  return "loginfail_" + normIdForHash_(employeeId).replace(/[^a-z0-9]/g, "").slice(0, 40);
+}
+
+// จองสิทธิ์พยายาม Login แบบ atomic (ใช้ Lock สั้นๆ) กัน Brute-force ด้วยการยิง request พร้อมกัน
+function reserveLoginAttempt_(cache, failKey) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const count = Number(cache.get(failKey) || 0);
+    if (count >= MAX_LOGIN_FAILS) return false;
+    cache.put(failKey, String(count + 1), LOCKOUT_SECONDS);
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function clearNewsCache_() {
@@ -142,7 +185,7 @@ function authError_(code, message) {
 }
 
 function userCacheKey_(employeeId) {
-  return "uactive_" + cleanId(employeeId).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+  return "uactive_" + normIdForHash_(employeeId).replace(/[^a-z0-9]/g, "").slice(0, 40);
 }
 
 function clearUserActiveCache_(employeeId) {
@@ -592,7 +635,11 @@ function dispatchPost_(action, payload) {
     case "updateVideos": return handleUpdateVideos(payload);
     case "uploadNewsImage": return handleUploadNewsImage(payload);
     case "ensureSheets": return ensureAllSheets();
-    case "setupDatabase": return setupInitialDatabase();
+    case "setupDatabase":
+      if (PropertiesService.getScriptProperties().getProperty("ALLOW_SEED") !== "true") {
+        return { success: false, message: "ปิดการสร้างข้อมูลเริ่มต้นไว้เพื่อความปลอดภัย (ต้องตั้ง Script Property ALLOW_SEED = true ก่อน)" };
+      }
+      return setupInitialDatabase();
     case "migrateSchema": return migrateDatabaseSchema();
     default: return { success: false, message: "Unknown POST action: " + action };
   }
@@ -615,8 +662,13 @@ function handleLogin(payload) {
   // ป้องกันการเดา PIN (Brute-force): ผิดครบ MAX_LOGIN_FAILS ครั้ง ล็อก 15 นาที
   const cache = CacheService.getScriptCache();
   const failKey = loginFailKey_(employeeId);
-  const failCount = Number(cache.get(failKey) || 0);
-  if (failCount >= MAX_LOGIN_FAILS) {
+  let allowed = false;
+  try {
+    allowed = reserveLoginAttempt_(cache, failKey);
+  } catch (e) {
+    return { success: false, message: "ระบบกำลังประมวลผลหลายรายการ กรุณาลองใหม่อีกครั้ง" };
+  }
+  if (!allowed) {
     recordLoginLog(employeeId, "Unknown", clientIp, "Failed (Locked)");
     return { success: false, message: "ใส่ PIN ผิดหลายครั้งเกินกำหนด กรุณารอ 15 นาทีแล้วลองใหม่" };
   }
@@ -669,7 +721,9 @@ function handleLogin(payload) {
     let needsHashUpgrade = false;
     if (rowPin !== "") {
       if (isHashedPin_(rowPin)) {
-        pinMatches = (rowPin === hashPin_(rowEmpId, pin));
+        const newHash = hashPin_(rowEmpId, pin);
+        pinMatches = (rowPin === newHash) || (rowPin === hashPinLegacy_(rowEmpId, pin));
+        needsHashUpgrade = pinMatches && rowPin !== newHash;
       } else {
         // PIN แบบเก่า (ข้อความธรรมดา) ยังใช้ได้ แล้วจะถูกอัปเกรดเป็น hash อัตโนมัติ
         pinMatches = (rowPin === pin) ||
@@ -696,14 +750,10 @@ function handleLogin(payload) {
   }
 
   if (!matchedUser) {
-    if (employeeFound) {
-      cache.put(failKey, String(failCount + 1), LOCKOUT_SECONDS);
-      recordLoginLog(employeeId, employeeName, clientIp, "Failed (Invalid PIN)");
-      return { success: false, message: "รหัส PIN ไม่ถูกต้อง" };
-    }
-    cache.put(failKey, String(failCount + 1), LOCKOUT_SECONDS);
-    recordLoginLog(employeeId, "Unknown", clientIp, "Failed (User Not Found)");
-    return { success: false, message: "ไม่พบรหัสพนักงานนี้ในระบบ" };
+    // นับครั้งที่ผิดไปแล้วตอน reserveLoginAttempt_ และใช้ข้อความเดียวกัน กันการไล่เดารหัสพนักงาน
+    recordLoginLog(employeeId, employeeFound ? employeeName : "Unknown", clientIp,
+      employeeFound ? "Failed (Invalid PIN)" : "Failed (User Not Found)");
+    return { success: false, message: "รหัสพนักงานหรือ PIN ไม่ถูกต้อง" };
   }
 
   if (matchedUser.status.toLowerCase() !== "active") {
@@ -1137,7 +1187,7 @@ function handleAddNews(payload) {
   ensureColumn_(sheet, ["PublishDate", "Publish Date", "Date"]);
   ensureColumn_(sheet, ["URL"]);
 
-  const id = "N" + new Date().getTime().toString().slice(-6);
+  const id = genId_("N");
   const title = payload.title || "";
   const detail = payload.detail || "";
   const category = payload.category || "General";
@@ -1175,7 +1225,11 @@ function handleSavePushToken(payload) {
       sheet.appendRow(SHEET_HEADERS.PushSubscriptions);
       formatHeaderRow(sheet);
     }
-    const empId = String(payload._sessionId || "GUEST").slice(0, 30);
+    const sid = cleanId(payload._sessionId || "");
+    if (!sid || !isUserActive_(sid)) {
+      return { success: false, message: "ต้องเข้าสู่ระบบก่อนบันทึกการแจ้งเตือน" };
+    }
+    const empId = sid.slice(0, 30);
     const subscription = String(payload.subscription || "").slice(0, 4000);
 
     // กันบันทึกซ้ำ (พนักงาน + อุปกรณ์เดิม)
@@ -1222,9 +1276,8 @@ function sendPushNotification_(title, detail, newsId) {
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
       });
+      recordAdminLog("SYSTEM", "Push Broadcast", `Dispatched notification for news ID: ${newsId} - "${title}"`);
     }
-
-    recordAdminLog("SYSTEM", "Push Broadcast", `Dispatched notification for news ID: ${newsId} - "${title}"`);
   } catch (err) {
     console.warn("sendPushNotification_ error:", err.toString());
   }
@@ -1375,7 +1428,7 @@ function handleAddApp(payload) {
   ensureSheetHeaders_(sheet, SHEET_HEADERS.Apps);
   ensureColumn_(sheet, ["Type"]);
 
-  const id = "APP" + new Date().getTime().toString().slice(-5);
+  const id = genId_("APP");
   const appName = payload.appName || "";
   const description = payload.description || "";
   const url = payload.url || "";
@@ -1519,11 +1572,11 @@ function getUsersData(params) {
 
     list.push({
       employeeId: employeeId,
-      name: row[nameCol] || "",
-      department: deptCol !== -1 ? (row[deptCol] || "") : "",
-      position: posCol !== -1 ? (row[posCol] || "") : "",
-      plant: plantCol !== -1 ? (row[plantCol] || "") : "",
-      status: statusCol !== -1 ? (row[statusCol] || "Active") : "Active",
+      name: String(row[nameCol] || ""),
+      department: deptCol !== -1 ? String(row[deptCol] || "") : "",
+      position: posCol !== -1 ? String(row[posCol] || "") : "",
+      plant: plantCol !== -1 ? String(row[plantCol] || "") : "",
+      status: statusCol !== -1 ? String(row[statusCol] || "Active") : "Active",
       isAdmin: isUserAdmin
     });
   }
@@ -1641,7 +1694,7 @@ function handleAddUser(payload) {
 
   for (let i = 1; i < data.length; i++) {
     const existingId = cleanId(data[i][empIdCol]);
-    if (existingId.toLowerCase() === employeeId.toLowerCase()) {
+    if (sameEmpId_(existingId, employeeId)) {
       return { success: false, message: "รหัสพนักงานนี้มีอยู่ในระบบแล้ว" };
     }
   }
@@ -1660,6 +1713,7 @@ function handleAddUser(payload) {
   });
 
   sheet.appendRow(newRow.map(safeCell_));
+  try { sheet.getRange(sheet.getLastRow(), empIdCol + 1).setNumberFormat("@").setValue(employeeId); } catch (e) {}
 
   if (payload.isAdmin) {
     syncAdminRole_(ss, employeeId, name, true, payload.role || "Admin");
@@ -1698,18 +1752,18 @@ function handleUpdateUser(payload) {
 
   for (let i = 1; i < data.length; i++) {
     const rowEmpId = cleanId(data[i][empIdCol]);
-    if (rowEmpId === employeeId || (rowEmpId.replace(/^0+/, "") === employeeId.replace(/^0+/, ""))) {
+    if (sameEmpId_(rowEmpId, employeeId)) {
       const rowIndex = i + 1;
       if (payload.name !== undefined && nameCol !== -1) sheet.getRange(rowIndex, nameCol + 1).setValue(safeCell_(payload.name));
       if (payload.department !== undefined && deptCol !== -1) sheet.getRange(rowIndex, deptCol + 1).setValue(safeCell_(payload.department));
       if (payload.position !== undefined && posCol !== -1) sheet.getRange(rowIndex, posCol + 1).setValue(safeCell_(payload.position));
       if (payload.plant !== undefined && plantCol !== -1) sheet.getRange(rowIndex, plantCol + 1).setValue(safeCell_(payload.plant));
       if (payload.pin !== undefined && pinCol !== -1) sheet.getRange(rowIndex, pinCol + 1).setNumberFormat("@").setValue(hashPin_(rowEmpId, cleanId(payload.pin)));
-      clearUserActiveCache_(employeeId);
       if (payload.status !== undefined && statusCol !== -1) sheet.getRange(rowIndex, statusCol + 1).setValue(safeCell_(payload.status));
+      clearUserActiveCache_(employeeId);
 
       if (payload.isAdmin !== undefined) {
-        syncAdminRole_(ss, employeeId, payload.name || data[i][nameCol], Boolean(payload.isAdmin), payload.role || "Admin");
+        syncAdminRole_(ss, employeeId, payload.name || data[i][nameCol], Boolean(payload.isAdmin), payload.role);
       }
 
       recordAdminLog(payload.adminId, "Update User", `Updated User: ${employeeId} - Name: ${payload.name || data[i][nameCol]}`);
@@ -1746,7 +1800,7 @@ function handleChangePin(payload) {
 
   for (let i = 1; i < data.length; i++) {
     const rowEmpId = cleanId(data[i][empIdCol]);
-    if (rowEmpId === employeeId || (rowEmpId.replace(/^0+/, "") === employeeId.replace(/^0+/, ""))) {
+    if (sameEmpId_(rowEmpId, employeeId)) {
       const rowIndex = i + 1;
       sheet.getRange(rowIndex, pinCol + 1).setNumberFormat("@").setValue(hashPin_(rowEmpId, newPin));
       try { CacheService.getScriptCache().remove(loginFailKey_(rowEmpId)); } catch (e) {} // เปลี่ยน PIN แล้วปลดล็อกให้ด้วย
@@ -1783,7 +1837,7 @@ function handleToggleUserStatus(payload) {
 
   for (let i = 1; i < data.length; i++) {
     const rowEmpId = cleanId(data[i][empIdCol]);
-    if (rowEmpId === employeeId || (rowEmpId.replace(/^0+/, "") === employeeId.replace(/^0+/, ""))) {
+    if (sameEmpId_(rowEmpId, employeeId)) {
       const rowIndex = i + 1;
       sheet.getRange(rowIndex, statusCol + 1).setValue(newStatus);
 
@@ -1846,7 +1900,7 @@ function handleContactSubmit(payload) {
   const sheet = ss.getSheetByName("ContactRequest");
   if (!sheet) return { success: false, message: "ContactRequest sheet not found" };
 
-  const id = "REQ" + new Date().getTime().toString().slice(-6);
+  const id = genId_("REQ");
   // ต้อง Login เท่านั้น: ใช้รหัสพนักงานจาก token (กันการปลอมตัวส่งเรื่องแทนคนอื่น)
   const employeeId = cleanId(payload._sessionId || "").slice(0, 30);
   if (!employeeId || !isUserActive_(employeeId)) {

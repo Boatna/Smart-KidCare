@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Sarabun:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --primary: #0284c7;
@@ -3723,4 +3723,398 @@ img, svg, video, canvas, iframe { max-width: 100%; }
   color: var(--primary);
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+/* ==========================================================================
+   Employee Portal — Modern Corporate theme
+   วางต่อจาก styles.css (ไม่แตะโครงสร้าง HTML / class เดิม)
+   <link rel="stylesheet" href="css/styles.css">
+   <link rel="stylesheet" href="css/corporate.css">
+   ธีมเทศกาล ([data-theme]) ยังทำงานได้ตามปกติ
+   ========================================================================== */
+
+/* ---------- 1. Design tokens ---------- */
+:root:not([data-theme]) {
+  --navy: #0b2a5b;
+  --navy-hover: #081f44;
+  --navy-soft: #e8eef8;
+  --sky: #1677e8;
+  --sky-hover: #0f63c8;
+  --sky-soft: #e6f1fe;
+
+  --primary: var(--navy);
+  --primary-hover: var(--navy-hover);
+  --primary-light: var(--sky-soft);
+  --primary-subtle: var(--navy-soft);
+  --secondary: var(--sky);
+  --secondary-dark: var(--sky-hover);
+  --border-focus: var(--sky);
+
+  --bg-main: #f4f6f9;
+  --bg-main-glow: #f4f6f9;
+  --bg-card: #ffffff;
+
+  --text-primary: #172033;
+  --text-secondary: #55627a;
+  --text-muted: #8a95a8;
+
+  --border-color: #e3e8ef;
+  --border-light: #eef1f6;
+
+  --shadow-sm: 0 1px 2px rgba(16, 36, 74, 0.05), 0 1px 3px rgba(16, 36, 74, 0.04);
+  --shadow-md: 0 4px 12px rgba(16, 36, 74, 0.07);
+  --shadow-lg: 0 10px 24px rgba(16, 36, 74, 0.10);
+  --shadow-xl: 0 18px 40px rgba(16, 36, 74, 0.16);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --font-family: 'Sarabun', 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Prompt', 'Sarabun', sans-serif;
+}
+
+/* ---------- 2. Base ---------- */
+body {
+  background: #f4f6f9;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+h1, h2, h3, h4,
+.page-title, .section-heading, .modal-title,
+.news-card-title, .app-card-title, .carousel-slide-title,
+.youtube-card-title, .login-title, .brand {
+  font-family: var(--font-heading, 'Prompt', sans-serif);
+}
+
+/* ---------- 3. Navbar ---------- */
+.navbar {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(16, 36, 74, 0.05);
+}
+
+.brand { color: var(--navy, #0b2a5b); font-weight: 600; }
+.brand-img { box-shadow: none; border-radius: 10px; }
+
+.nav-link { border-radius: 8px; color: var(--text-secondary); }
+.nav-link:hover { background: #f1f4f9; color: var(--navy, #0b2a5b); }
+.nav-link.active {
+  background: var(--navy-soft, #e8eef8);
+  color: var(--navy, #0b2a5b);
+  font-weight: 600;
+}
+.nav-link.admin-pill {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+.nav-link.admin-pill:hover,
+.nav-link.admin-pill.active {
+  background: var(--navy-soft, #e8eef8);
+  border-color: transparent;
+  color: var(--navy, #0b2a5b);
+}
+
+.user-badge { box-shadow: none; border-color: var(--border-color); }
+.avatar { background: var(--navy, #0b2a5b); box-shadow: none; }
+
+/* ---------- 4. Page header ---------- */
+.page-header {
+  padding-left: 1rem;
+  border-left: 4px solid var(--sky, #1677e8);
+}
+.page-title { color: var(--navy, #0b2a5b); font-weight: 600; letter-spacing: 0; }
+.page-title svg { stroke: var(--sky, #1677e8); }
+.page-subtitle { color: var(--text-secondary); }
+
+/* ---------- 5. Cards & surfaces ---------- */
+.card,
+.filter-bar,
+.table-container,
+.stat-card,
+.contact-card,
+.news-card,
+.app-card,
+.youtube-card,
+.admin-sidebar {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+.card:hover { box-shadow: var(--shadow-md); border-color: var(--border-color); }
+
+/* ---------- 6. Buttons (สีฟ้าสด) ---------- */
+html:not([data-theme]) .btn-primary,
+html:not([data-theme]) .btn-carousel-read,
+html:not([data-theme]) .btn-pwa-nav {
+  background: var(--sky);
+  color: #fff;
+  border: none;
+  box-shadow: 0 1px 2px rgba(22, 119, 232, 0.25);
+}
+html:not([data-theme]) .btn-primary:hover,
+html:not([data-theme]) .btn-carousel-read:hover,
+html:not([data-theme]) .btn-pwa-nav:hover {
+  background: var(--sky-hover);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(22, 119, 232, 0.28);
+}
+.btn-secondary { box-shadow: none; border-color: var(--border-color); }
+.btn-secondary:hover { background: var(--sky-soft, #e6f1fe); border-color: #b9d6fb; color: var(--navy, #0b2a5b); }
+
+/* ---------- 7. Filter bar / tabs ---------- */
+.filter-btn { background: #fff; border-color: var(--border-color); border-radius: 8px; }
+.filter-btn:hover { background: var(--sky-soft, #e6f1fe); border-color: #b9d6fb; color: var(--navy, #0b2a5b); }
+html:not([data-theme]) .filter-btn.active {
+  background: var(--navy);
+  color: #fff;
+  box-shadow: none;
+}
+
+/* ---------- 8. Tags / Badges (ป้ายหมวดหมู่) ---------- */
+.badge {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+}
+.badge-primary   { background: #e6f1fe; color: #0b4fa8; }
+.badge-success   { background: #e5f6ee; color: #11704a; }
+.badge-warning   { background: #fff3dc; color: #8a5300; }
+.badge-danger    { background: #fde8e8; color: #a12020; }
+.badge-secondary { background: #eef1f6; color: #4a566c; }
+
+/* ---------- 9. News feed ---------- */
+.news-grid { gap: 1.5rem; }
+.news-card { border-radius: var(--radius-lg); }
+.news-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: #b9d6fb;
+}
+.news-card-img-wrapper { height: 190px; background: #e8eef8; }
+.news-card-title { color: var(--navy, #0b2a5b); font-weight: 600; font-size: 1.08rem; }
+.news-card-desc { color: var(--text-secondary); }
+.news-card-footer { border-top-color: var(--border-light); color: var(--sky, #1677e8); }
+
+/* ---------- 10. Quick Apps ---------- */
+.apps-grid { gap: 1.25rem; }
+.app-card { border-radius: var(--radius-lg); padding: 1.35rem; }
+.app-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--sky, #1677e8);
+}
+.app-icon-box {
+  background: var(--navy-soft, #e8eef8);
+  border: none;
+  color: var(--navy, #0b2a5b);
+  border-radius: 12px;
+}
+html:not([data-theme]) .app-card:hover .app-icon-box {
+  background: var(--sky);
+  color: #fff;
+  transform: none;
+  box-shadow: none;
+}
+.app-card-title { color: var(--navy, #0b2a5b); font-weight: 600; }
+.app-card-footer { border-top-color: var(--border-light); }
+.app-link-btn { color: var(--sky, #1677e8); }
+
+/* ---------- 11. Carousel ---------- */
+.carousel-viewport {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+.carousel-slide-content { background: #ffffff; }
+.carousel-slide-title { color: var(--navy, #0b2a5b); font-weight: 600; letter-spacing: 0; }
+.carousel-slide:hover .carousel-slide-title { color: var(--sky, #1677e8); }
+.carousel-slide-media-overlay { background: linear-gradient(90deg, rgba(255,255,255,0.35) 0%, transparent 18%); }
+.carousel-live-badge { border-radius: 8px; }
+.carousel-dot.active { background: var(--sky, #1677e8); box-shadow: none; }
+
+/* ---------- 12. YouTube ---------- */
+.youtube-card { border-radius: var(--radius-lg); }
+.youtube-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: #b9d6fb; }
+.youtube-card-title { color: var(--navy, #0b2a5b); font-weight: 600; }
+.section-heading { color: var(--navy, #0b2a5b); font-weight: 600; letter-spacing: 0; }
+
+/* ---------- 13. Forms ---------- */
+.form-label { color: var(--navy, #0b2a5b); font-weight: 600; }
+.form-control { border-color: #d5dce7; border-radius: 8px; }
+.form-control:focus {
+  border-color: var(--sky, #1677e8);
+  box-shadow: 0 0 0 3px rgba(22, 119, 232, 0.18);
+}
+
+/* ---------- 14. Login ---------- */
+.login-page { background: #f4f6f9; }
+.login-page::before, .login-page::after { display: none; }
+.login-card { border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); }
+.login-brand-img { box-shadow: none; }
+.login-title { color: var(--navy, #0b2a5b); font-weight: 600; }
+.pin-digit { border-color: #d5dce7; background: #fff; color: var(--navy, #0b2a5b); }
+.pin-digit:focus { border-color: var(--sky, #1677e8); box-shadow: 0 0 0 3px rgba(22, 119, 232, 0.18); transform: none; }
+.pin-digit.filled { background: var(--sky-soft, #e6f1fe); border-color: var(--sky, #1677e8); }
+
+/* ---------- 15. Admin ---------- */
+.admin-sidebar { border-radius: var(--radius-lg); }
+.admin-nav-item { border-radius: 8px; }
+.admin-nav-item:hover { background: #f1f4f9; color: var(--navy, #0b2a5b); }
+html:not([data-theme]) .admin-nav-item.active {
+  background: var(--navy);
+  color: #fff;
+  box-shadow: none;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #b9d6fb; }
+.stat-value { color: var(--navy, #0b2a5b); font-family: var(--font-heading, 'Prompt', sans-serif); }
+.stat-icon.blue   { background: #e6f1fe; }
+.stat-icon.green  { background: #e5f6ee; }
+.stat-icon.orange { background: #fff3dc; }
+.stat-icon.purple { background: #eee9fb; color: #5b3fc4; }
+
+.table-header-actions { background: #fff; }
+.data-table th { background: #f4f6f9; color: var(--navy, #0b2a5b); font-weight: 600; }
+.data-table tr:hover td { background: #f8fafd; }
+html:not([data-theme]) .pagination-btn.active { background: var(--navy); border-color: var(--navy); }
+
+/* ---------- 16. Modal / Toast / Footer ---------- */
+.modal-backdrop { background: rgba(11, 42, 91, 0.45); }
+.modal-content { border-radius: var(--radius-lg); }
+.modal-header { background: #fff; }
+.modal-title { color: var(--navy, #0b2a5b); font-weight: 600; }
+.modal-footer { background: #f4f6f9; }
+.footer { background: #fff; color: var(--text-muted); }
+
+/* ---------- 17. Accessibility ---------- */
+:focus-visible {
+  outline: 2px solid var(--sky, #1677e8);
+  outline-offset: 2px;
+}
+.form-control:focus-visible, .pin-digit:focus-visible { outline: none; }
+
+/* ---------- 18. Responsive ---------- */
+@media (max-width: 768px) {
+  .page-header { padding-left: 0.75rem; border-left-width: 3px; }
+  .page-title { font-size: 1.35rem; }
+  .news-card:hover, .app-card:hover, .youtube-card:hover { transform: none; }
+  .carousel-slide-content { background: transparent; }
+  .carousel-slide-title { color: #fff; }
+  .carousel-slide:hover .carousel-slide-title { color: #fff; }
+}
+
+@media (hover: none) {
+  .news-card:hover, .app-card:hover, .youtube-card:hover, .stat-card:hover { transform: none; }
+}
+
+/* ---------- 19. Home layout: News Feed + Quick Apps ---------- */
+.portal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.75rem;
+  align-items: start;
+}
+.portal-main { min-width: 0; }
+.portal-main .news-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+  gap: 1.25rem;
+}
+.portal-main .filter-bar { padding: 0.85rem 1rem; }
+
+.quick-apps-panel {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+  position: sticky;
+  top: calc(var(--navbar-height) + var(--safe-top, 0px) + 1rem);
+}
+.quick-apps-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.quick-apps-title {
+  font-family: var(--font-heading, 'Prompt', sans-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--navy, var(--primary));
+}
+.quick-apps-all { font-size: 0.85rem; font-weight: 600; color: var(--secondary); }
+.quick-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.quick-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.95rem 0.5rem;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.quick-app:hover {
+  transform: translateY(-3px);
+  border-color: var(--secondary);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
+}
+.quick-app-icon {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--primary-subtle);
+  color: var(--primary);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.quick-app:hover .quick-app-icon { background: var(--secondary); color: #fff; }
+.quick-app-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.quick-apps-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 0.75rem 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.quick-apps-empty p { margin-bottom: 0.85rem; }
+.quick-app-skeleton { height: 96px; border-radius: var(--radius-md); }
+
+@media (max-width: 1100px) {
+  .portal-layout { grid-template-columns: 1fr; }
+  .quick-apps-panel { position: static; order: -1; }
+  .quick-apps-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 576px) {
+  .quick-apps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quick-app:hover { transform: none; }
 }

@@ -22,12 +22,16 @@ const Auth = (function() {
     localStorage.setItem(SESSION_KEY, JSON.stringify(Object.assign({}, user, { _savedAt: Date.now() })));
   }
 
+  // ออกจากระบบด้วยตัวเอง -> กลับหน้าแรก (index.html)
+  // เซสชันหมดอายุ/ถูกปิดบัญชี (reason = "expired") -> ไปหน้า Login พร้อมข้อความแจ้ง
   function logout(reason) {
-    localStorage.removeItem(SESSION_KEY);
+    try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
     if (reason === "expired") {
       try { sessionStorage.setItem("session_expired", "1"); } catch (e) {}
+      window.location.replace("login.html");
+      return;
     }
-    window.location.href = "login.html";
+    window.location.replace("index.html");
   }
 
   function isLoggedIn() {
@@ -79,6 +83,17 @@ const Auth = (function() {
       return "127.0.0.1 (Local)";
     }
   }
+
+  // กันหน้าที่ต้อง Login ค้างอยู่หลังออกจากระบบ (ปุ่ม Back / แท็บอื่น)
+  const loggedInAtLoad = isLoggedIn();
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted && isLoggedIn() !== loggedInAtLoad) window.location.reload();
+  });
+  window.addEventListener("storage", (e) => {
+    if (e.key === SESSION_KEY && !e.newValue && loggedInAtLoad) {
+      window.location.replace("index.html");
+    }
+  });
 
   return {
     getUser,

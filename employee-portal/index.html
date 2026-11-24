@@ -88,6 +88,8 @@
       <div class="carousel-dots" id="carouselDots">
       </div>
     </section>
+    <div class="portal-layout">
+    <div class="portal-main">
     <div class="filter-bar animate-fade-in">
       <div class="search-box">
         <div class="input-icon-wrapper">
@@ -107,6 +109,17 @@
     </div>
     <div class="news-grid" id="newsGrid">
     </div>
+    </div>
+
+    <aside class="quick-apps-panel animate-fade-in" aria-label="ทางลัดเข้าสู่ระบบงาน">
+      <div class="quick-apps-head">
+        <h2 class="quick-apps-title">ทางลัดเข้าสู่ระบบงาน</h2>
+        <a href="apps.html" class="quick-apps-all">ดูทั้งหมด</a>
+      </div>
+      <div class="quick-apps-grid" id="quickAppsGrid"></div>
+    </aside>
+    </div>
+
     <section class="youtube-section animate-fade-in" id="youtubeSection" aria-label="วิดีโอประชาสัมพันธ์">
       <div class="section-title-bar">
         <div class="section-title-group">
@@ -161,7 +174,7 @@
   <div id="editVideosModal" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 680px;">
       <div class="modal-header">
-        <h3 class="modal-title">จัดการลิงก์วิดีโอ YouTube (3 ช่อง)</h3>
+        <h3 class="modal-title">จัดการลิงก์วิดีโอ YouTube</h3>
         <button class="modal-close" data-dismiss="modal" aria-label="Close">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
@@ -231,8 +244,7 @@
 
   <footer class="footer">
     <div class="nav-container" style="height: auto; justify-content: center; flex-direction: column; gap: 0.35rem;">
-      <p>&copy; 2026 Employee Portal — Internal Enterprise Solutions. All rights reserved.</p>
-      <small style="color: var(--text-muted);">Deployed via GitHub Pages | Powered by Google Apps Script & Google Sheets</small>
+      <p>&copy; 2027 Employee Portal — Internal Enterprise Solutions. All rights reserved.</p>
     </div>
   </footer>
 
@@ -244,5 +256,6 @@
   <script src="js/api.js"></script>
   <script src="js/pwa.js"></script>
   <script src="js/news.js"></script>
+  <script src="js/quickapps.js"></script>
 </body>
 </html>
