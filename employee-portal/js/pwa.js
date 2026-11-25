@@ -21,7 +21,6 @@ const PWA = (function () {
 
   let deferredPrompt = null;
   let activePrompt = null;
-  let evalTimer = null;
 
   function toast(message, type, duration) {
     if (typeof Utils !== "undefined" && Utils.showToast) {
@@ -65,7 +64,6 @@ const PWA = (function () {
 
   function init() {
     registerServiceWorker();
-    setupInstallListeners();
     injectInstallMenuItem();
     setupNotificationButton();
     updateInstallEntryPoints();
@@ -154,6 +152,8 @@ const PWA = (function () {
     if (canPromptNotifications()) showNotificationPrompt();
   }
 
+  // ต้องผูก listener ทันทีที่สคริปต์โหลด (ไม่รอ DOMContentLoaded)
+  // เพราะ Chrome อาจยิง beforeinstallprompt ก่อน init() ทำงาน ทำให้พลาด event แล้วติดตั้งไม่ได้
   function setupInstallListeners() {
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
@@ -238,7 +238,8 @@ const PWA = (function () {
     if (isInAppBrowser) return openGuide("inapp");
     if (isIOS) return openGuide("ios");
 
-    toast("ติดตั้งได้จากเมนูของเบราว์เซอร์ (⋮ แล้วเลือก ติดตั้งแอป / เพิ่มลงหน้าจอหลัก)", "info", 6000);
+    // Android/เบราว์เซอร์อื่น ที่ยังไม่ได้รับ beforeinstallprompt: แสดงวิธีติดตั้งด้วยตนเองแทนข้อความสั้นๆ
+    openGuide("android");
   }
 
   function injectInstallMenuItem() {
@@ -282,21 +283,32 @@ const PWA = (function () {
     if (old) old.remove();
 
     const isInApp = kind === "inapp";
-    const title = isInApp ? "เปิดด้วยเบราว์เซอร์เพื่อติดตั้ง" : "ติดตั้งบน iPhone / iPad";
+    const isAndroid = kind === "android";
+    const title = isInApp
+      ? "เปิดด้วยเบราว์เซอร์เพื่อติดตั้ง"
+      : (isAndroid ? "ติดตั้งบน Android / คอมพิวเตอร์" : "ติดตั้งบน iPhone / iPad");
     const intro = isInApp
       ? "เบราว์เซอร์ในแอป LINE / Facebook ติดตั้งแอปไม่ได้ ให้เปิดหน้านี้ด้วย Safari หรือ Chrome ก่อน"
-      : "ทำตามขั้นตอนนี้ใน Safari เพื่อเพิ่ม Employee Portal ลงหน้าจอโฮม";
+      : (isAndroid
+        ? "ใช้ Google Chrome (หรือ Edge) แล้วติดตั้งด้วยตนเองตามขั้นตอนนี้"
+        : "ทำตามขั้นตอนนี้ใน Safari เพื่อเพิ่ม Employee Portal ลงหน้าจอโฮม");
     const steps = isInApp
       ? [
           "แตะปุ่ม <strong>⋯</strong> หรือ <strong>⋮</strong> ที่มุมจอ",
           "เลือก <strong>เปิดในเบราว์เซอร์</strong> (Open in browser)",
           "ในเบราว์เซอร์ที่เปิดขึ้น ให้ติดตั้งตามข้อความที่แสดง"
         ]
-      : [
-          "แตะปุ่ม <strong>แชร์</strong> 📤 (ด้านล่างของ Safari หรือมุมบนขวาบน iPad)",
-          "เลื่อนลงแล้วเลือก <strong>เพิ่มไปยังหน้าจอโฮม</strong>",
-          "กด <strong>เพิ่ม</strong> แล้วเปิดแอปจากหน้าจอโฮม จะเปิดรับแจ้งเตือนข่าวได้ (iOS 16.4 ขึ้นไป)"
-        ];
+      : (isAndroid
+        ? [
+            "แตะเมนู <strong>⋮</strong> ที่มุมขวาบนของ Chrome",
+            "เลือก <strong>ติดตั้งแอป</strong> หรือ <strong>เพิ่มลงในหน้าจอหลัก</strong> (Install app / Add to Home screen)",
+            "กด <strong>ติดตั้ง</strong> แล้วเปิดแอปจากหน้าจอหลัก (ต้องเปิดผ่าน https:// และไม่ใช่โหมดไม่ระบุตัวตน)"
+          ]
+        : [
+            "แตะปุ่ม <strong>แชร์</strong> 📤 (ด้านล่างของ Safari หรือมุมบนขวาบน iPad)",
+            "เลื่อนลงแล้วเลือก <strong>เพิ่มไปยังหน้าจอโฮม</strong>",
+            "กด <strong>เพิ่ม</strong> แล้วเปิดแอปจากหน้าจอโฮม จะเปิดรับแจ้งเตือนข่าวได้ (iOS 16.4 ขึ้นไป)"
+          ]);
 
     const modal = document.createElement("div");
     modal.id = "pwaGuideModal";
@@ -558,6 +570,8 @@ const PWA = (function () {
     setInterval(checkNewNewsAndNotify, NEWS_POLL_MS);
   }
 
+  setupInstallListeners();
+
   return {
     init,
     promptInstall,
@@ -569,6 +583,8 @@ const PWA = (function () {
     checkNewNewsAndNotify
   };
 })();
+
+window.PWA = PWA;
 
 document.addEventListener("DOMContentLoaded", () => {
   PWA.init();

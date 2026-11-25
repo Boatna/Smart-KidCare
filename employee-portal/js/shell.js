@@ -1,14 +1,8 @@
-/**
- * ==============================================================================
- * APP SHELL (Responsive Navigation) — Employee Portal
- * - สร้าง Sidebar จากเมนูเดิม: Desktop = เต็ม, Tablet = ไอคอนขยายได้, Mobile = Drawer
- * - สร้าง Bottom Navigation สำหรับมือถือ
- * - ใส่ data-label ให้ตาราง .data-table เพื่อแปลงเป็น Card List บนมือถือ
- * โหลดเป็นสคริปต์ "ตัวสุดท้าย" ของแต่ละหน้า (index, apps, contact, admin)
- * ==============================================================================
- */
 (function () {
   "use strict";
+
+  const getAuth = () => (typeof Auth !== "undefined" ? Auth : null);
+  const getPWA = () => (typeof PWA !== "undefined" ? PWA : null);
 
   /* ---------- ตั้งค่าเมนู ---------- */
   const NAV_ITEMS = [
@@ -18,9 +12,6 @@
   ];
   const ADMIN_ITEM = { href: "admin.html", label: "แผงควบคุมแอดมิน", short: "แอดมิน", icon: "settings" };
 
-  // เมนูลัดเพิ่มเติม (แสดงใน Sidebar/Drawer) เช่น ลงเวลา / ลางาน / สลิปเงินเดือน
-  // ตัวอย่าง: { href: "modules/leave/index.html", label: "ลางาน", icon: "calendar" }
-  // icon ที่ใช้ได้: home grid chat settings calendar clock file wallet
   const EXTRA_ITEMS = [];
 
   const svg = (p) => '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + "</svg>";
@@ -38,7 +29,9 @@
     logout: svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>')
   };
   const icon = (k) => ICONS[k] || ICONS.grid;
-  const esc = (s) => (window.Utils && Utils.escapeHtml) ? Utils.escapeHtml(s) : String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const esc = (s) => (typeof Utils !== "undefined" && Utils.escapeHtml)
+    ? Utils.escapeHtml(s)
+    : String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   const mqMobile = window.matchMedia("(max-width: 767px)");
   const mqTablet = window.matchMedia("(min-width: 768px) and (max-width: 1024px)");
@@ -48,16 +41,18 @@
     const navbar = document.querySelector(".navbar");
     if (!navbar || document.body.classList.contains("has-shell")) return;
 
+    const A = getAuth();
+    const P = getPWA();
+
     const page = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-    const user = (window.Auth && Auth.getUser && Auth.getUser()) || null;
-    const isAdmin = Boolean(window.Auth && Auth.isAdmin && Auth.isAdmin());
+    const user = (A && A.getUser && A.getUser()) || null;
+    const isAdmin = Boolean(A && A.isAdmin && A.isAdmin());
     const items = NAV_ITEMS.concat(isAdmin ? [ADMIN_ITEM] : []);
     const isActive = (it) => String(it.href).toLowerCase() === page;
     const current = items.find(isActive);
 
     document.body.classList.add("has-shell");
 
-    /* ----- ชื่อหน้าใน Top Header (แท็บเล็ต/คอมพิวเตอร์) ----- */
     const container = navbar.querySelector(".nav-container");
     const brand = navbar.querySelector(".brand");
     if (container && brand) {
@@ -67,13 +62,12 @@
       brand.after(title);
     }
 
-    /* ----- Sidebar ----- */
     const linkHtml = (it) =>
       '<li><a class="sb-link' + (isActive(it) ? " active" : "") + '" href="' + esc(it.href) + '" title="' + esc(it.label) + '"' +
       (isActive(it) ? ' aria-current="page"' : "") + (it.external ? ' target="_blank" rel="noopener noreferrer"' : "") + ">" +
       icon(it.icon) + '<span class="sb-label">' + esc(it.label) + "</span></a></li>";
 
-    const showInstall = !(window.PWA && PWA.isStandalone && PWA.isStandalone());
+    const showInstall = !(P && P.isStandalone && P.isStandalone());
     const userHtml = user
       ? '<div class="sb-user"><div class="avatar">' + esc((user.name || "U").charAt(0).toUpperCase()) + "</div>" +
         '<div class="sb-user-info"><span class="sb-user-name">' + esc(user.name) + "</span>" +
@@ -146,8 +140,10 @@
       const btn = e.target.closest("[data-act]");
       if (!btn) return;
       setOpen(false);
-      if (btn.dataset.act === "logout" && window.Auth) Auth.logout();
-      if (btn.dataset.act === "install" && window.PWA) PWA.promptInstall();
+      const authNow = getAuth();
+      const pwaNow = getPWA();
+      if (btn.dataset.act === "logout" && authNow) authNow.logout();
+      if (btn.dataset.act === "install" && pwaNow) pwaNow.promptInstall();
     });
 
     labelTables();
@@ -170,7 +166,6 @@
     });
   }
 
-  /* ปีลิขสิทธิ์ใน Footer ให้เป็นปีปัจจุบันอัตโนมัติ (เดิมเขียนตายตัวเป็น 2027) */
   function setFooterYear() {
     const y = new Date().getFullYear();
     document.querySelectorAll(".footer p").forEach((p) => {

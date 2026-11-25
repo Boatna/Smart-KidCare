@@ -1,24 +1,16 @@
-/* ==========================================================================
-   Employee Portal — Responsive App Shell (Mobile-first)
-   โหลดต่อจาก css/styles.css  |  ทำงานเมื่อ js/shell.js เติม class "has-shell" ให้ <body>
-   Breakpoints:  มือถือ < 768 | แท็บเล็ต 768–1024 | คอมพิวเตอร์ ≥ 1025
-   ========================================================================== */
-
-/* ---------- 1. Tokens ---------- */
 :root {
-  --hdr-h: 60px;          /* ความสูง Top Header */
-  --sb-w: 0px;            /* ความกว้าง Sidebar ที่กินพื้นที่เนื้อหา */
-  --bn-h: 0px;            /* ความสูง Bottom Nav (เฉพาะมือถือ) */
+  --hdr-h: 60px;
+  --sb-w: 0px;
+  --bn-h: 0px;
   --sbw-full: 224px;
   --sbw-mini: 68px;
-  --tap: 44px;            /* ขนาดจุดกดขั้นต่ำ */
+  --tap: 44px;
   --navbar-height: var(--hdr-h);
 }
 @media (max-width: 767px)  { :root { --hdr-h: 60px; --bn-h: 62px; } }
 @media (min-width: 768px) and (max-width: 1024px) { :root { --hdr-h: 64px; --sb-w: var(--sbw-mini); } }
 @media (min-width: 1025px) { :root { --hdr-h: 68px; --sb-w: var(--sbw-full); } }
 
-/* ---------- 2. Page frame ---------- */
 body.has-shell {
   transition: padding-left .22s ease;
   padding-left: var(--sb-w);
@@ -32,10 +24,8 @@ body.has-shell {
 }
 .has-shell .page-title { font-size: clamp(1.3rem, 1.05rem + 1vw, 2rem); }
 .has-shell .page-subtitle { font-size: clamp(.875rem, .82rem + .25vw, 1.025rem); }
-
-/* ---------- 3. Top Header (ใช้ .navbar เดิม) ---------- */
 .has-shell .navbar nav,
-.has-shell .btn-pwa-nav { display: none !important; }      /* เมนูย้ายไป Sidebar / Bottom Nav */
+.has-shell .btn-pwa-nav { display: none !important; }
 .has-shell .nav-container {
   max-width: none;
   height: var(--hdr-h);
@@ -71,7 +61,6 @@ body.has-shell {
   .has-shell .user-badge .user-info { display: none; }
 }
 
-/* ---------- 4. Sidebar (Desktop เต็ม / Tablet ไอคอน / Mobile Drawer) ---------- */
 .app-sidebar {
   position: fixed; top: 0; bottom: 0; left: 0; z-index: 1050;
   width: var(--sbw-full);
@@ -117,13 +106,12 @@ body.has-shell {
 }
 .app-scrim.show { opacity: 1; visibility: visible; transition: opacity .2s ease; }
 
-/* Mobile: Drawer */
 @media (max-width: 767px) {
   .app-sidebar { width: min(300px, 86vw); transform: translateX(-100%); visibility: hidden; transition: transform .25s cubic-bezier(.16, 1, .3, 1), visibility 0s .25s; }
   .app-sidebar.open { transform: none; visibility: visible; box-shadow: var(--shadow-xl); transition: transform .25s cubic-bezier(.16, 1, .3, 1), visibility 0s; }
   .app-scrim { display: block; }
 }
-/* Tablet: Mini sidebar (กดขยายได้) */
+
 @media (min-width: 768px) and (max-width: 1024px) {
   .app-sidebar { width: var(--sbw-mini); }
   .app-sidebar.expanded { width: var(--sbw-full); box-shadow: var(--shadow-xl); }
@@ -136,7 +124,6 @@ body.has-shell {
   .app-sidebar:not(.expanded) .sb-user { justify-content: center; padding-left: 0; padding-right: 0; }
 }
 
-/* ---------- 5. Bottom Navigation (มือถือ) ---------- */
 .bottom-nav { display: none; }
 @media (max-width: 767px) {
   .bottom-nav {
@@ -156,8 +143,6 @@ body.has-shell {
   .bn-item svg { width: 24px; height: 24px; }
   .bn-item.active { color: var(--primary); font-weight: 600; }
   .bn-item.active::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--secondary, var(--primary)); }
-
-  /* ยกองค์ประกอบลอยให้พ้น Bottom Nav */
   .has-shell .back-to-top { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + .75rem); }
   .has-shell .toast-container { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + .75rem); }
   .has-shell .pwa-prompt { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + .5rem); }
@@ -165,8 +150,6 @@ body.has-shell {
   body.has-shell.has-pwa-prompt .toast-container { bottom: calc(var(--bn-h) + var(--safe-bottom, 0px) + 9rem); }
 }
 
-/* ---------- 6. Dashboard / Card grids ---------- */
-/* มือถือ 1 คอลัมน์ → แท็บเล็ต 2 → คอมพิวเตอร์ 3–4 */
 .has-shell .stats-grid,
 .has-shell .news-grid,
 .has-shell .portal-main .news-grid,
@@ -188,7 +171,6 @@ body.has-shell {
   .has-shell .youtube-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-/* หน้าแรก: ข่าว + ทางลัดระบบงาน — Sidebar กินพื้นที่แล้ว จึงแยก 2 คอลัมน์เมื่อกว้างพอ */
 .has-shell .portal-layout { grid-template-columns: minmax(0, 1fr); }
 .has-shell .quick-apps-panel { position: static; order: -1; padding: 1rem; }
 .has-shell .quick-apps-grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: .6rem; }
@@ -201,16 +183,11 @@ body.has-shell {
   .has-shell .quick-apps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* Carousel บนจอกลาง: ใช้เลย์เอาต์ซ้อน (ข้อความทับรูป) ให้อ่านง่าย */
 @media (max-width: 1024px) {
   .has-shell .carousel-float-arrow { display: none; }
 }
 
-/* ---------- 7. ตาราง ---------- */
-/* แท็บเล็ต/คอมพิวเตอร์: ตารางปกติ + เลื่อนแนวนอนเฉพาะกล่องตาราง */
 .has-shell .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
-/* มือถือ: แปลงแถวเป็น Card List (JS เติม data-label ให้ <td> อัตโนมัติ) */
 @media (max-width: 767px) {
   .has-shell .table-container { background: transparent; border: 0; box-shadow: none; overflow: visible; }
   .has-shell .table-header-actions { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: .75rem; }
@@ -239,13 +216,10 @@ body.has-shell {
   .has-shell .pagination-btn { min-width: var(--tap); min-height: var(--tap); }
 }
 
-/* ---------- 8. ฟอร์ม & Modal ---------- */
 @media (max-width: 767px) {
   .has-shell .form-grid-2 { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .has-shell .form-control { min-height: var(--tap); }
   .has-shell textarea.form-control { min-height: 120px; }
-
-  /* Modal = Bottom Sheet, ปุ่มยืนยันติดขอบล่างและกดง่าย */
   .modal-backdrop { padding: 0; align-items: flex-end; }
   .modal-content { max-width: 100%; max-height: 92dvh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
   .modal-footer {
@@ -253,8 +227,6 @@ body.has-shell {
     padding: .85rem 1.25rem calc(.85rem + var(--safe-bottom, 0px));
   }
   .modal-footer .btn { width: 100%; min-height: var(--tap); }
-
-  /* ฟอร์มแจ้งปัญหา: ปุ่มส่งเต็มความกว้างและลอยเหนือ Bottom Nav */
   .has-shell .contact-card { padding: 1.25rem 1rem; overflow: visible; }
   .has-shell #contactForm > div:last-child {
     position: sticky; z-index: 5; margin-top: 1rem !important; padding: .6rem 0;
@@ -262,8 +234,6 @@ body.has-shell {
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 35%);
   }
   .has-shell #btnSubmitContact { width: 100%; height: 50px; }
-
-  /* ตัวกรอง/แท็บแอดมิน: แถบเลื่อนแนวนอน กดง่าย */
   .has-shell .filter-btn,
   .has-shell .admin-nav-item { min-height: var(--tap); display: inline-flex; align-items: center; }
 }
@@ -272,7 +242,6 @@ body.has-shell {
   .modal-content { max-width: min(680px, 92%); }
 }
 
-/* ---------- 9. หน้า Admin ---------- */
 @media (max-width: 1024px) {
   .has-shell .admin-layout { flex-direction: column; gap: 1rem; }
   .has-shell .admin-sidebar {
@@ -288,14 +257,12 @@ body.has-shell {
   .has-shell .admin-sidebar { width: 230px; top: calc(var(--hdr-h) + var(--safe-top, 0px) + 1rem); }
 }
 
-/* ---------- 10. จุดกดสำหรับหน้าจอสัมผัส ---------- */
 @media (pointer: coarse) {
   .btn, .btn-sm { min-height: var(--tap); }
   .filter-btn { min-height: var(--tap); }
   .modal-close, .toast-close { min-width: var(--tap); min-height: var(--tap); }
 }
 
-/* ---------- 11. ป้องกันล้นแนวนอน ---------- */
 .has-shell img, .has-shell iframe, .has-shell video, .has-shell svg { max-width: 100%; }
 .has-shell .card, .has-shell .news-card, .has-shell .app-card, .has-shell .youtube-card,
 .has-shell .stat-card, .has-shell .admin-content { min-width: 0; }
@@ -304,7 +271,6 @@ body.has-shell {
   .app-sidebar, .app-scrim { transition: none !important; }
 }
 
-/* ---------- 12. Desktop: Sidebar ขนาดกะทัดรัด + กดย่อ/ขยายได้ ---------- */
 @media (min-width: 1025px) {
   .sb-nav { padding: .6rem .5rem; gap: .15rem; }
   .sb-link { min-height: 40px; padding: 0 .8rem; gap: .7rem; font-size: .9rem; }
@@ -312,7 +278,6 @@ body.has-shell {
   .sb-brand { padding: 0 .9rem; }
   .sb-user-name { font-size: .85rem; }
 
-  /* ย่อเหลือแถบไอคอน (จำค่าไว้ใน localStorage) */
   body.sb-collapsed { --sb-w: var(--sbw-mini); }
   body.sb-collapsed .app-sidebar { width: var(--sbw-mini); }
   body.sb-collapsed .app-sidebar .sb-label,
@@ -321,4 +286,61 @@ body.has-shell {
   body.sb-collapsed .app-sidebar .sb-link { justify-content: center; padding: 0; }
   body.sb-collapsed .app-sidebar .sb-brand,
   body.sb-collapsed .app-sidebar .sb-user { justify-content: center; padding-left: 0; padding-right: 0; }
+}
+
+@media (max-width: 767px) {
+  .has-shell .filter-bar {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: .75rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: .85rem;
+    overflow: hidden;
+  }
+
+  .has-shell .filter-bar .search-box,
+  .has-shell .table-header-actions .search-box,
+  .has-shell .search-box {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+  .has-shell .search-box .input-icon-wrapper,
+  .has-shell .search-box .form-control { width: 100%; min-width: 0; max-width: 100%; }
+
+  .has-shell .filter-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .has-shell .filter-categories .filter-btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    padding: .35rem .8rem;
+    font-size: .82rem;
+  }
+
+  .has-shell .table-header-actions { width: 100%; max-width: 100%; min-width: 0; }
+  .has-shell .table-header-actions > div { min-width: 0; width: 100%; max-width: 100%; }
+  .has-shell .table-header-actions select.form-control,
+  .has-shell .table-header-actions .form-control { width: 100% !important; min-width: 0; max-width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .has-shell .filter-categories .filter-btn { padding: .3rem .65rem; font-size: .78rem; }
+  .has-shell .main-content { padding-left: .75rem; padding-right: .75rem; }
 }
